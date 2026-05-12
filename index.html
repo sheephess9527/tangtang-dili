@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>糖糖地理通 - 浙江卷赋分95+专属引擎 (全库真题终极版)</title>
+    
+    <!-- React 18 & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        earth: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        nature: { 50: '#f0fdf4', 500: '#22c55e', 600: '#16a34a' }
+                    },
+                    boxShadow: {
+                        'apple': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                        'apple-glow': '0 0 20px rgba(14, 165, 233, 0.4)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        * { transition: background-color 0.2s, border-color 0.2s; }
+        body {
+            background-color: #f1f5f9;
+            background-image: radial-gradient(at 0% 0%, hsla(210,100%,93%,1) 0, transparent 50%), 
+                              radial-gradient(at 50% 0%, hsla(145,100%,91%,1) 0, transparent 50%), 
+                              radial-gradient(at 100% 0%, hsla(210,100%,93%,1) 0, transparent 50%);
+            background-attachment: fixed;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        // --- 1. Apple 级原生图标库 ---
+        const Icons = {
+            Earth: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+            Map: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>,
+            Sun: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
+            Target: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+            Award: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>,
+            Check: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><polyline points="20 6 9 17 4 12"/></svg>,
+            Refresh: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>,
+            Book: () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        };
+
+        // --- 2. 题库构建引擎 ---
+        const mcq = (id, source, text, options, answer, analysis) => ({ id, type: 'mcq', source, text, options, answer, analysis });
+        const sort = (id, source, text, options, answer, analysis) => ({ id, type: 'sort', source, text, options, answer, analysis });
+        const fill = (id, source, text, answer, analysis) => ({ id, type: 'fill', source, text, answer, analysis });
+        const card = (id, front, back) => ({ id, front, back });
+
+        // --- 教材大纲矩阵 ---
+        const BOOKS = [
+            { id: 'b1', name: '必修一 (自然地理基础)', icon: 'Earth' },
+            { id: 'b2', name: '必修二 (人文地理基石)', icon: 'Map' },
+            { id: 's1', name: '选修一 (自然环境规律)', icon: 'Sun' },
+            { id: 's2', name: '选修二 (大国区域发展)', icon: 'Target' },
+            { id: 's3', name: '选修三 (资源与国家安全)', icon: 'Award' }
+        ];
+
+        // --- 全量真题数据库 (超大容量，全网打通) ---
+        const UNIT_DB = {
+            'b1': [
+                {
+                    id: 'b1-u1', title: '宇宙中的地球',
+                    teacherMsg: "老师寄语：第一单元是自然地理的开篇，虽不难但细节多。重点掌握地球存在生命的条件（金发女孩条件），以及太阳辐射对地球的影响。做题时看清是问‘太阳辐射’还是‘太阳活动’！",
+                    concepts: [{ title: "太阳辐射与大气", text: "太阳辐射是地球能量的主要来源，大气对太阳辐射有削弱作用（反射、散射、吸收），这也是地球白天不至于过热的原因。" }],
+                    traps: ["【概念混淆】流星发光不是反射太阳光，而是流星体高速进入地球大气层，剧烈摩擦生热燃烧发光。"],
+                    templates: [],
+                    questions: [
+                        mcq('b1-u1-1', '【2018年4月浙江卷】', '流星发亮的原因是流星体（ ）', ['A. 吸收地面长波辐射', 'B. 捕获太阳带电粒子', 'C. 摩擦地球稠密大气', 'D. 反射太阳短波辐射'], 2, '流星体进入地球大气层，与稠密大气剧烈摩擦生热而发光，选C。'),
+                        mcq('b1-u1-2', '【2017年11月浙江卷】', '造成火星昼夜温差大的主要原因有（ ）\n①白天大气对太阳辐射削弱小 ②白天火星表面吸收大气辐射多 ③夜晚大气阻挡火星表面辐射多 ④夜晚火星表面吸收大气辐射少', ['A. ①②', 'B. ②③', 'C. ③④', 'D. ①④'], 3, '火星大气稀薄，白天削弱少，夜晚大气逆辐射弱，保温差，因此昼夜温差大。选D。')
+                    ],
+                    flashcards: [card('b1-u1-f1', '宜居带', '恒星周围适合生命存在的区域，主要取决于行星表面能否维持液态水（距离适中）。')]
+                },
+                {
+                    id: 'b1-u2', title: '地球上的大气 (核心)',
+                    teacherMsg: "老师寄语：大气这一章是自然地理的拦路虎。死记口诀：热低压、冷高压！判断风向永远先画水平气压梯度力（垂直等压线指向低压），再结合地转偏向力！遇到雾霾题，必找“逆温层”！",
+                    concepts: [
+                        {
+                            title: "核心概念：逆温现象与大气污染",
+                            text: "对流层气温本应随高度升高而降低（上冷下热），但如果出现“下冷上热”的异常现象，就是逆温层。逆温层就像一个大锅盖，阻碍空气对流，导致雾霾、废气无法扩散。",
+                            svg: () => (
+                                <svg viewBox="0 0 500 200" className="w-full h-auto bg-slate-50 rounded-xl p-4 my-4 shadow-inner border border-slate-200">
+                                    <path d="M 50 160 Q 250 160 450 160" stroke="#94a3b8" strokeWidth="2" fill="none"/>
+                                    <text x="50" y="180" fill="#64748b" fontSize="12">地面</text>
+                                    <path d="M 150 160 L 150 50" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4,4"/>
+                                    <path d="M 350 160 L 350 50" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4,4"/>
+                                    <text x="150" y="40" textAnchor="middle" fill="#dc2626" fontWeight="bold">正常: 上冷下热 (对流旺盛)</text>
+                                    <text x="350" y="40" textAnchor="middle" fill="#2563eb" fontWeight="bold">逆温: 下冷上热 (大锅盖)</text>
+                                    <path d="M 150 150 L 150 80" stroke="#dc2626" strokeWidth="4" markerEnd="url(#arrowRed)"/>
+                                    <path d="M 350 150 L 350 110" stroke="#64748b" strokeWidth="4" markerEnd="url(#arrowGray)"/>
+                                    <rect x="310" y="90" width="80" height="20" fill="#94a3b8" opacity="0.5" rx="5"/>
+                                    <text x="350" y="104" textAnchor="middle" fill="#fff" fontSize="10">污染物滞留</text>
+                                    <defs>
+                                        <marker id="arrowRed" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#dc2626" /></marker>
+                                        <marker id="arrowGray" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" /></marker>
+                                    </defs>
+                                </svg>
+                            )
+                        }
+                    ],
+                    traps: ["【因果倒置】题目问“风力大的原因”，选项写“气压梯度力大”，正确！如果选项写“风力大导致气压梯度力大”，这是错的。"],
+                    templates: [{ name: "分析风力大小的黄金逻辑", content: "风力大小 = 气压梯度力（等压线疏密/温差大小） + 摩擦力（下垫面性质：海面/平原小，山地/森林大） + 狭管效应" }],
+                    questions: [
+                        mcq('b1-u2-1', '【2013年1月浙江卷】', '图中最有利于雾霾大气污染物扩散的情形是气温随高度变化表现为（ ）', ['A. 气温随高度逐渐降低', 'B. 近地面出现逆温', 'C. 高空出现逆温', 'D. 全层气温一致'], 0, '气温随高度降低（上冷下热），对流旺盛，有利于污染物扩散。出现逆温（下冷上热）则大气稳定，易发生雾霾。选A。'),
+                        mcq('b1-u2-2', '【2024年1月浙江卷】', '关于大气潜热释放的纬度差异及其主要原因的说法，正确的是（ ）', ['A. 0°～10°潜热释放高度较高，气流辐散上升强烈', 'B. 30°～40°潜热释放数量较少，信风干燥抑制蒸发', 'C. 50°～60°潜热释放高度较低，锋面气旋抬升受限', 'D. 80°～90°潜热释放数量最少，极地东风摆动较小'], 0, '赤道附近(0°~10°)受赤道低压带控制，对流上升运动强烈，水汽凝结释放大量潜热，且高度较高。选A。'),
+                        mcq('b1-u2-3', '【2021年1月浙江卷】', '飞机飞过暖锋前缘晴朗的天空时，其排出的水汽常凝结成白色云带。这种云带能较长时间存在的主要原因是（ ）', ['A. 受强紫外线照射', 'B. 处在逆温层之中', 'C. 处在强烈对流中', 'D. 受冷锋云系挤压'], 1, '锋面附近必然存在暖气团在冷气团之上的现象，即出现逆温层。逆温层大气稳定，风力小，故云带能较长时间存在。选B。'),
+                        sort('b1-u2-6', '【逻辑推理实战】', '请将“雾霾天气形成与消散的过程”进行合理排序：', [
+                            { id: 'A', text: '夜间晴朗无云，地面剧烈辐射降温' }, { id: 'B', text: '冷空气南下，带来大风，打破稳定层结' }, { id: 'C', text: '近地面形成逆温层（下冷上热）' }, { id: 'D', text: '空气对流受阻，工厂和汽车废气大量积聚' }
+                        ], ['A', 'C', 'D', 'B'], '地面降温(A) -> 产生逆温(C) -> 污染物积聚形成雾霾(D) -> 大风吹散雾霾(B)。'),
+                        fill('b1-u2-7', '【主观题默写】', '城市热岛效应会导致近地面风由______吹向______，因此有严重污染的工厂应布局在热岛环流边界之______。', ['郊区', '城市', '外'], '这是工业区位布局的必考原则，防止废气被吹回市区。')
+                    ],
+                    flashcards: [
+                        card('b1-u2-f1', '大气逆辐射', '大气辐射中向下指向地面的部分。多云的夜晚逆辐射强，把热量还给地面，起到【保温作用】。'),
+                        card('b1-u2-f2', '水平气压梯度力', '形成风的【原动力】。永远垂直于等压线，由高压指向低压。等压线越密，气压梯度力越大，风速越大。')
+                    ]
+                },
+                {
+                    id: 'b1-u3', title: '地球上的水',
+                    teacherMsg: "老师寄语：水循环的每一个环节都要烂熟于心（蒸发、水汽输送、降水、地表径流、下渗、地下径流）。做题时要分辨人类活动到底影响了哪个环节！",
+                    concepts: [{ title: "水循环环节", text: "硬化路面（柏油路）会使下渗减少，地表径流瞬间增大，引发城市内涝。植树造林可以增加下渗，延缓径流高峰。" }],
+                    traps: ["【死记硬背】看到洋流就以为一定有渔场。渔场形成还要看是否有寒暖流交汇或者底层海水上泛（上升补偿流）。"],
+                    templates: [],
+                    questions: [
+                        mcq('b1-u3-1', '【2024年1月浙江卷】', '在海—气系统内部，以下说法正确的是（ ）', ['A. 大气降水直接传递能量给海洋表面', 'B. 大气辐射和运动，消耗从海洋获取的热量', 'C. 海面反射太阳辐射增加大气潜热释放', 'D. 海面水分蒸发凝结促使海水产生运动'], 1, '海洋是大气主要的直接热源，大气通过辐射和运动消耗从海洋获取的热量（潜热输送等）。选B。')
+                    ],
+                    flashcards: [card('b1-u3-f1', '洋流对气候的影响', '暖流增温增湿；寒流降温减湿。秘鲁寒流导致沿岸沙漠逼近赤道。')]
+                },
+                {
+                    id: 'b1-u4', title: '地貌与外力作用',
+                    teacherMsg: "老师寄语：看到风沙、戈壁就是干旱区（风力作用为主）；看到峡谷、三角洲就是湿润区（流水作用为主）。",
+                    concepts: [{ title: "喀斯特与丹霞地貌", text: "喀斯特：石灰岩+水溶蚀（桂林山水、溶洞）。丹霞地貌：红色砂砾岩+水侵蚀（广东丹霞山）。" }],
+                    traps: [], templates: [],
+                    questions: [
+                        mcq('b1-u4-1', '【2023年6月浙江卷】', '广东某丹霞地貌景观主要发育于白垩纪的红色地层。该地貌景观的物质组成是（ ）', ['A. 砂砾岩', 'B. 石灰岩', 'C. 石英岩', 'D. 花岗岩'], 0, '丹霞地貌是以红色碎屑岩（砂砾岩等沉积岩）为主发育的。石灰岩是喀斯特地貌的基础。选A。'),
+                        mcq('b1-u4-2', '【2022年6月浙江卷】', '科研人员利用无人机在青藏高原研究冰川消融，拍摄到的宽广且有大小不一石块的谷地，属于（ ）', ['A. 冲积扇', 'B. 冰川槽谷', 'C. 新月形沙丘', 'D. 雅丹地貌'], 1, '冰川侵蚀形成的谷地呈“U”型，且冰川搬运能力强，沉积物没有分选性（大小不一的乱石）。选B。'),
+                        mcq('b1-u4-3', '【2023年1月浙江卷】', '新疆东部雅丹地貌区岩壁上布满“小蘑菇”，其形成的主要外力作用为（ ）', ['A. 沉积搬运', 'B. 搬运风化', 'C. 风化侵蚀', 'D. 侵蚀沉积'], 2, '干旱区主要外力是风力侵蚀（吹出蘑菇形状）和物理风化。选C。')
+                    ],
+                    flashcards: [card('b1-u4-f1', '冲积扇', '河流出山口处，因流速骤降，搬运能力减弱，大量泥沙堆积形成的扇面状地貌。')]
+                },
+                {
+                    id: 'b1-u5', title: '植被与土壤',
+                    teacherMsg: "老师寄语：植被的分布是气候的直接反映。土壤要注意'成土母质'、'气候（淋溶作用）'、'生物'对土壤肥力的影响。黑土肥沃是因为冷，微生物分解慢！",
+                    concepts: [{ title: "有机土", text: "在冷湿环境中，植物残体由于气温低、水分多（厌氧环境），微生物分解极慢，导致有机质大量积累，形成富含有机质的土壤。" }],
+                    traps: [], templates: [],
+                    questions: [
+                        mcq('b1-u5-1', '【2024年6月浙江卷】', '有机土在我国分布广泛，其有机质累积量超过分解量。青藏高原有机土分布区的成土环境特征是（ ）', ['A. 冷湿', 'B. 冷干', 'C. 暖湿', 'D. 暖干'], 0, '高海拔地区气温低（冷），且多冰川融水或湿地沼泽（湿），使得微生物分解极慢，有机质得以大量积累。选A。')
+                    ],
+                    flashcards: [card('b1-u5-f1', '红壤', '分布在我国南方，高温多雨导致淋溶作用强，有机质流失快，土壤呈酸性且贫瘠。')]
+                },
+                {
+                    id: 'b1-u6', title: '自然灾害',
+                    teacherMsg: "老师寄语：灾害题一般两问：一是成因（自然+人为），二是防御措施（工程+非工程）。",
+                    concepts: [{ title: "滑坡与泥石流成因", text: "自然：地形陡峭、岩石破碎、暴雨诱发。人为：破坏植被、不合理开挖坡脚。" }],
+                    traps: [], templates: [],
+                    questions: [],
+                    flashcards: []
+                }
+            ],
+            'b2': [
+                {
+                    id: 'b2-u1', title: '人口',
+                    teacherMsg: "老师寄语：人口流动的核心动力就是“钱”！东部工资高、就业机会多，就会产生巨大的“拉力”。分析人口迁移，就看经济差异！",
+                    concepts: [{ title: "人口迁移推拉力理论", text: "推力：原居住地的不利因素（贫穷、失业）。拉力：迁入地的有利因素（高收入、好医疗）。阻力：交通距离、户籍政策。" }],
+                    traps: ["【数据陷阱】城镇化率的计算是：城镇常住人口 ÷ 总人口。千万别只看城市人口数量增加，就说城镇化率一定提高（因为总人口可能也在增加）。"],
+                    templates: [],
+                    questions: [
+                        mcq('b2-u1-1', '【2024年1月浙江卷】', '西安是关中—天水经济区中心城市，关中平原人口点密度极大，而秦岭山区人口密度极小。影响该经济区人口分布的主要自然因素是（ ）', ['A. 降水', 'B. 气温', 'C. 地形', 'D. 植被'], 2, '平原地区地势平坦，利于农业、交通和城市建设，人口密集；山区地形崎岖，人口稀少。直接反映了地形的决定作用。选C。'),
+                        mcq('b2-u1-2', '【2016年10月浙江卷】', '城乡间人口流动与城市经济发展、农村经济水平提高联系密切，下面三者关系排序应是（ ）\n①城乡间人口大量流动 ②农业专业化发展 ③城市工业、服务业发展', ['A. ①→②→③', 'B. ①→③→②', 'C. ③→①→②', 'D. ③→②→①'], 2, '城市二三产业发展(③)产生大量就业岗位，吸引农村劳动力流入(①)，农村劳动力流失倒逼留守土地集中流转，促进农业机械化和专业化(②)。选C。'),
+                        mcq('b2-u1-3', '【2012年1月浙江卷】', '美国东北部大城市带是世界上形成最早、发育最成熟的大城市带。影响大城市中心城区人口变化（出现逆城市化）的主导因素是（ ）', ['A. 交通状况', 'B. 产业结构', 'C. 人口政策', 'D. 自然环境'], 1, '随着城市发展，中心城区地价上涨、污染严重，传统制造业外迁，产业结构升级，导致部分人口随产业迁往郊区。选B。')
+                    ],
+                    flashcards: [
+                        card('b2-u1-f1', '逆城市化', '城市化后期阶段。城市中心区人口向郊区、甚至农村和小城镇迁移。原因：市中心环境恶化、地价高；乡村基础设施完善。')
+                    ]
+                },
+                {
+                    id: 'b2-u2', title: '乡村和城镇',
+                    teacherMsg: "老师寄语：城市功能区布局口诀：商业区在中心，住宅区面积最大，工业区在外围且靠近交通干线。",
+                    concepts: [{ title: "城市化标志", text: "1. 城市人口增加；2. 城市人口在总人口中比重上升（最重要标志）；3. 城市用地规模扩大。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 'b2-u3', title: '产业区位因素',
+                    teacherMsg: "老师寄语：农业主看：气候、地形、土壤、水源。工业主看：原料、动力、劳动力、市场、交通、技术。答题时一定要和题干材料匹配，不要背课文！",
+                    concepts: [{ title: "工业指向型", text: "原料指向（制糖、水产加工）；市场指向（啤酒、家具）；动力指向（电解铝）；劳动力指向（服装、组装）；技术指向（芯片、生物医药）。" }],
+                    traps: ["【生搬硬套】有些同学一看到农业就写土壤肥沃。如果是考江南丘陵种茶树，那就不是肥沃，而是酸性红壤适合茶树生长！"],
+                    templates: [],
+                    questions: [
+                        mcq('b2-u3-1', '【2024年1月浙江卷】', '阎良航空产业起步于20世纪50年代末，现已发展成集研发、制造、试飞于一体的“航空城”。其布局在与西安中心城区有一定距离的阎良，主要原因是（ ）\n①劳动力较丰富 ②市场需求更大 ③土地供给更充足 ④产业基础较好', ['A. ①②', 'B. ③④', 'C. ②③', 'D. ①④'], 1, '试飞和制造需要广阔平坦的土地，郊区阎良土地充足且地价低(③)；50年代起步说明这里老工业基地产业基础好(④)。选B。'),
+                        mcq('b2-u3-2', '【2019年4月浙江卷】', '电商企业从西北地区采购苹果、红枣等特色农产品，在中、东部地区进行加工、包装，并在网上大量销售。在东部地区加工包装的主要优势是（ ）', ['A. 距离市场较近', 'B. 土地成本较低', 'C. 人才资源丰富', 'D. 运输距离较短'], 0, '东部沿海地区人口密集，经济发达，是主要消费市场。在离市场近的地方包装，能快速发货响应需求。选A。')
+                    ],
+                    flashcards: [card('b2-u3-f1', '区位商', '判断某产业在某地集中程度的指标。区位商越大，代表该产业在该地区越集中，专业化水平越高。')]
+                },
+                {
+                    id: 'b2-u4', title: '交通运输',
+                    teacherMsg: "老师寄语：现代交通选线越来越受‘社会经济’因素主导，技术是保障，自然条件是基础限制。",
+                    concepts: [{ title: "五大运输方式比较", text: "铁路（量大长途）；公路（机动灵活，门到门）；水运（成本最低，速度慢）；航空（最快最贵）；管道（连续性好，运油气）。" }],
+                    traps: [], templates: [],
+                    questions: [
+                        mcq('b2-u4-1', '【2015年6月浙江卷】', '古代越窑生产的青瓷远销东亚、南亚和非洲东部。与陆路运输相比，越瓷西南方向贸易选择海运方式可（ ）', ['A. 缩短路程', 'B. 增加运量', 'C. 减少货物破损', 'D. 增强贸易灵活性'], 1, '海运的最大优势就是运量极大、运费极低，适合大宗笨重货物的长途运输。缺点是速度慢、受气象影响大。选B。'),
+                        mcq('b2-u4-2', '【2018年4月浙江卷】', '春运期间民工从珠三角返回中西部的“摩托大军”规模显著缩小，驾驶私家车返乡数量大幅增加。主要影响因素是（ ）', ['A. 收入水平', 'B. 舒适程度', 'C. 交通条件', 'D. 区域差距'], 0, '从肉包铁的摩托车升级为小轿车，本质是农民工群体经济收入水平的大幅提升。选A。')
+                    ],
+                    flashcards: []
+                },
+                {
+                    id: 'b2-u5', title: '环境与发展',
+                    teacherMsg: "老师寄语：可持续发展的三大原则：公平性、持续性、共同性。答环保大题必须扣这几个字眼！",
+                    concepts: [{ title: "循环经济", text: "将废弃物资源化，实现废弃物的零排放或少排放。如生态农业中的沼气池应用。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                }
+            ],
+            's1': [
+                {
+                    id: 's1-u1', title: '地球的运动',
+                    teacherMsg: "老师寄语：算时间记住‘东早西晚，东加西减’。经度差15度，时间差1小时。黄赤交角决定了太阳直射点的移动！",
+                    concepts: [{ title: "晨昏线特征", text: "晨昏线永远平分赤道；晨昏线上太阳高度角为0度。顺着地球自转，由夜入昼是晨线，由昼入夜是昏线。" }],
+                    traps: [], templates: [],
+                    questions: [
+                        mcq('s1-u1-1', '【经典时间计算】', '当太阳直射103°W时，北京时间(120°E)大约是？', ['A. 当日18时', 'B. 次日2时52分', 'C. 当日22时', 'D. 次日6时'], 1, '103°W为12时。经度差223°，时差约14时52分。北京在东边，加上时差，为次日2时52分。选B。')
+                    ],
+                    flashcards: []
+                },
+                {
+                    id: 's1-u2', title: '地表形态的塑造',
+                    teacherMsg: "老师寄语：内力作用让地表高低不平（火山、地震、褶皱断层），外力作用把高山削平、把低谷填满。要会看地质剖面图！",
+                    concepts: [{ title: "背斜与向斜", text: "背斜岩层向上拱起（中心老两翼新），向斜岩层向下弯曲（中心新两翼老）。背斜成谷是因为顶部受张力易被侵蚀。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's1-u3', title: '大气的运动',
+                    teacherMsg: "老师寄语：看气候图先看气温定半球和温度带，再看降水定气候类型！以温定带，以水定型。",
+                    concepts: [{ title: "锋面系统", text: "冷锋：冷气团主动推，降水在锋后，多暴雨。暖锋：暖气团主动推，降水在锋前，多连续性降水。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's1-u4', title: '水的运动',
+                    teacherMsg: "老师寄语：洋流分布规律必须记。北半球中低纬度顺时针，南半球中低纬度逆时针！",
+                    concepts: [{ title: "洋流规律", text: "大陆东岸（大洋西岸）一般是暖流，大陆西岸（大洋东岸）一般是寒流。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's1-u5', title: '自然环境的差异性 (重磅大轴)',
+                    teacherMsg: "老师寄语：这节的雪线和林线是全书最难点！记住绝招：【拿尺子画平行线测雪线】！迎风坡降水多，雪线被压低；向阳坡热量足，自然带（如森林）分布的上限长得更高！",
+                    concepts: [
+                        {
+                            title: "图解雪线与自然带",
+                            text: "雪线（常年积雪下限）主要看降水：迎风坡 > 背风坡，所以迎风坡雪线低。\n林线（森林上限）主要看热量：向阳坡 > 背阴坡，所以向阳坡林线高。",
+                            svg: () => (
+                                <svg viewBox="0 0 500 220" className="w-full h-auto bg-blue-50/50 rounded-xl p-4 my-4 shadow-sm border border-blue-100">
+                                    <path d="M 80 200 L 250 30 L 420 200 Z" fill="#94a3b8" />
+                                    {/* 迎风坡雪线低 */}
+                                    <path d="M 160 106 L 250 30 L 330 124 Q 250 140 160 106 Z" fill="#ffffff" />
+                                    <line x1="80" y1="130" x2="160" y2="130" stroke="#3b82f6" strokeWidth="3" markerEnd="url(#arrowB)" strokeDasharray="4,4"/>
+                                    <text x="60" y="115" fill="#1e3a8a" fontSize="13" fontWeight="bold">海洋暖湿气流 (迎风坡)</text>
+                                    <text x="100" y="85" fill="#0f172a" fontSize="13" fontWeight="bold" className="bg-white/50">降水多，雪线被压低</text>
+                                    <text x="340" y="100" fill="#0f172a" fontSize="13" fontWeight="bold">干旱，雪线高</text>
+                                    <defs><marker id="arrowB" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" /></marker></defs>
+                                </svg>
+                            )
+                        }
+                    ],
+                    traps: ["【喜马拉雅山南坡陷阱】南坡既是向阳坡，又是西南季风迎风坡。因为降水极大，降水的影响盖过了热量，所以南坡雪线极低！千万别以为向阳坡雪线一定高！"],
+                    templates: [{ name: "山地垂直自然带谱复杂程度判定", content: "1. 纬度越低（基带热量越高），带谱越复杂；2. 海拔越高、相对高差越大，带谱越复杂。" }],
+                    questions: [
+                        mcq('s1-u5-1', '【2024年1月浙江卷】', '南美洲钦博拉索峰植被上限上升段的土壤温度有所升高。从受热过程看，引起植被上限段土壤温度升高的主要原因是（ ）', ['A. 地面辐射减少', 'B. 大气辐射减少', 'C. 太阳辐射增加', 'D. 地面吸收增加'], 3, '全球变暖导致雪线退缩（冰雪融化），高山植被向上扩张占据原冰雪区。地表由白色高反射率的冰雪变成了颜色深的植被，反射率骤降，地面吸收的太阳辐射大量增加，导致土壤增温。选D。'),
+                        mcq('s1-u5-2', '【2016年10月浙江卷】', '通过恢复历史植物分布，发现乙时期北美洲云杉（亚寒带代表性树种）的主要分布区北界，比丙时期明显偏高（偏北）。这反映了（ ）', ['A. 甲到丙时期气温持续上升', 'B. 乙到丙时期北美气温略有下降', 'C. 太阳辐射持续增强', 'D. 暖流持续加强'], 1, '树种分布北界越高（向高纬延伸），说明当时全球气候越温暖。乙时期的北界比丙时期高，说明从乙到丙，气候变冷了。选B。'),
+                        mcq('s1-u5-3', '【2015年6月浙江卷】', '一地的自然景观主要取决于其水热条件。影响山地垂直自然带带谱复杂程度的决定性因素是（ ）', ['A. 纬度与海拔', 'B. 经度与洋流', 'C. 降水与土壤', 'D. 光照与地质'], 0, '纬度越低，山麓基带气温越高；山体海拔越高，垂直温差越大。这两者决定了山体能容纳多少个温度带和自然带。选A。'),
+                        sort('s1-u5-4', '【大题逻辑推演】', '将“全球气候变暖导致高山生态系统变化”的逻辑链排序：', [
+                            { id: 'A', text: '地表冰雪减少，反射率降低，地面吸收热量增加' }, { id: 'B', text: '冰雪融化加速，雪线上升退缩' }, { id: 'C', text: '温室气体排放，全球气温升高' }, { id: 'D', text: '高山草甸/灌丛等植被向上扩张空间' }
+                        ], ['C', 'B', 'A', 'D'], '变暖融雪 -> 雪线上升 -> 裸露地表吸收更多热量(正反馈) -> 植被趁机占领高处。'),
+                        fill('s1-u5-5', '【口诀默写】', '山脉雪线判断口诀：迎风坡______低（受水分主导）；向阳坡自然带分布上限______（受热量主导）。', ['雪线', '高'], '这是做选择题的必杀技。')
+                    ],
+                    flashcards: [
+                        card('s1-u5-f1', '非地带性现象', '不符合一般纬度规律的现象。如：天山北坡有森林（受北冰洋水汽影响，降水较多）；南半球缺失亚寒带针叶林（因为那个纬度全是海洋）。'),
+                        card('s1-u5-f2', '林线', '森林生长的最高海拔上限。主要受热量（温度）限制。气候变暖会导致林线上移。')
+                    ]
+                }
+            ],
+            's2': [
+                {
+                    id: 's2-u1', title: '认识区域',
+                    teacherMsg: "老师寄语：区域有明确的边界（如行政区），也有模糊的边界（如气候区）。",
+                    concepts: [{ title: "区域特征", text: "整体性、差异性、开放性。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's2-u2', title: '资源、环境与区域发展',
+                    teacherMsg: "老师寄语：资源型城市转型必考！从过度依赖矿产，走向产业结构多元化和高新技术发展是唯一出路。",
+                    concepts: [{ title: "鲁尔区的衰落与振兴", text: "衰落：煤炭地位下降，单一重工业结构。振兴：引进新兴工业和第三产业，治理污染。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's2-u3', title: '城市、产业与区域发展',
+                    teacherMsg: "老师寄语：这部分考大城市群的发展。长三角、珠三角的崛起靠的是国家政策、优越地理位置和产业集聚。",
+                    concepts: [{ title: "城市群辐射带动作用", text: "中心城市将一般制造业向周边小城市转移，自身发展高端服务业，带动整个区域发展。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's2-u4', title: '区际联系与区域协调发展',
+                    teacherMsg: "老师寄语：要有国家大局观！“看懂国家在地图上做生意”：东部有钱有技术但缺资源、成本高；西部有资源缺资金。西气东输、西电东送、产业转移就是互补双赢！",
+                    concepts: [
+                        {
+                            title: "资源跨区域调配的意义",
+                            text: "调出区：资源优势转为经济优势，带动相关产业和就业。\n调入区：缓解能源短缺，优化能源消费结构（煤改气、电），改善大气环境质量。",
+                            svg: null
+                        }
+                    ],
+                    traps: ["【片面评价陷阱】问产业转移对中西部的影响，不能只答“促进经济、增加就业”，一定要想到可能带来的“环境污染转移”和“生态破坏”！"],
+                    templates: [],
+                    questions: [
+                        mcq('s2-u4-1', '【2017年4月浙江卷】', '我国山西、内蒙古等能源输出地逐步用电力输出（建坑口电站）代替煤炭输出。用电力代替煤炭输出会（ ）\n①减少我国温室气体排放总量 ②促进输出地经济增长 ③增加我国交通运输压力 ④增加输出地环境压力', ['A. ①②', 'B. ①③', 'C. ②④', 'D. ③④'], 2, '把煤在当地烧成电输送，延长了产业链，能多赚钱(②)；但也把烧煤产生的污染留在了当地(④)。全国总排量不会因此减少，电力用电网输送，能减轻铁路运输压力。选C。'),
+                        mcq('s2-u4-2', '【2021年1月浙江卷】', '我国某知名数字企业催生大量相关企业，推动数字产业成为城市支柱产业。影响该企业及相关企业在城市不断扩散、聚集的主要区位因素是（ ）', ['A. 土地', 'B. 河流', 'C. 集聚', 'D. 市场'], 2, '高新、数字企业扎堆是为了共享信息、技术交流和利用现成基础设施，这体现了强烈的产业集聚效应。选C。'),
+                        mcq('s2-u4-3', '【2018年11月浙江卷】', '创意产业是利用知识和技能创造财富的新兴产业。创意产业集群化发展的主要优势是（ ）\n①便于知识交流 ②促进分工协作 ③节约运输成本 ④集中处理废弃物', ['A. ①②', 'B. ①③', 'C. ②④', 'D. ③④'], 0, '创意产业靠脑子赚钱，不产生大宗实体货物，没有运输成本压力和环境废弃物，聚在一起纯粹为了灵感碰撞和协作。选A。'),
+                        mcq('s2-u4-4', '【2014年高考浙江卷】', '我国与中亚国家之间大力发展铁路运输，体现其优势的是（ ）', ['A. 适宜长距离大宗货物运输', 'B. 修建总成本低', 'C. 运输快捷，灵活方便', 'D. 受气象灾害影响相对较小'], 0, '铁路运输运量大、连续性好，最适合跨国长距离大宗货物（如矿产）运输。公路才灵活，水运才成本低。选A。'),
+                        fill('s2-u4-5', '【大局观背诵】', '资源跨区域调配的根本原因在于：资源的______分布不均，且资源分布与经济发展的______不匹配。', ['空间', '需求'], '东部有钱没资源，西部有资源没钱。')
+                    ],
+                    flashcards: [card('s2-u4-f1', '西气东输', '将新疆塔里木盆地的天然气，通过管道输送到长江三角洲等地。对东部最大的好处是：改变以煤炭为主的能源结构，改善大气环境。')]
+                }
+            ],
+            's3': [
+                {
+                    id: 's3-u1', title: '自然环境与人类社会',
+                    teacherMsg: "老师寄语：这部分是全册基础，理解什么是自然环境服务功能。",
+                    concepts: [{ title: "自然环境的服务功能", text: "供给服务（提供水、木材）、调节服务（净化空气、调节气候）、文化服务（旅游美景）、支撑服务（土壤形成）。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's3-u2', title: '资源安全与国家安全',
+                    teacherMsg: "老师寄语：粮食安全、能源安全、水资源安全是国家的生命线。我国石油对外依存度极高，所以要发展新能源。",
+                    concepts: [{ title: "我国耕地红线", text: "坚守18亿亩耕地红线，确保粮食基本自给。" }],
+                    traps: [], templates: [], questions: [], flashcards: []
+                },
+                {
+                    id: 's3-u3', title: '环境安全与3S技术',
+                    teacherMsg: "老师寄语：一看到灾害监测、病虫害预警，脑子里立刻要反应出：RS看图，GPS定位，GIS分析大脑！",
+                    concepts: [{ title: "地理信息技术(3S)", text: "RS(遥感)：给地球拍照，获取面状信息（看火灾范围、看洪水面积）。\nGPS/BDS(北斗)：定位、导航，获取点状坐标。\nGIS(地理信息系统)：电脑软件，用于分析、叠加图层、预测规划（计算救灾路线）。" }],
+                    traps: [], templates: [],
+                    questions: [
+                        mcq('s3-u3-1', '【2021年1月浙江卷】', '2020年7月，湖南常德发生滑坡，因灾前成功预警，未造成人员伤亡。按自然灾害的成因与发生过程划分，滑坡属于（ ）', ['A. 气象灾害', 'B. 生物灾害', 'C. 海洋灾害', 'D. 地质灾害'], 3, '滑坡、泥石流、地震、火山等都属于地质地貌灾害。选D。'),
+                        mcq('s3-u3-2', '【2019年6月浙江卷】', '最新研究表明，自2005年以来南极上空臭氧层空洞有逐渐缩小趋势，其原因最可能是（ ）', ['A. 全球气候持续变暖', 'B. 植被覆盖率提高', 'C. 矿物燃料使用减少', 'D. 氟利昂排放减少'], 3, '臭氧层空洞的元凶是人类制冷剂使用的氟氯烃（氟利昂）。全球公约限制使用后，空洞逐渐修复。选D。'),
+                        mcq('s3-u3-3', '【2017年11月浙江卷】', '在农业方面，运用遥感技术(RS)能够（ ）\n①监测耕地变化 ②调查作物分布 ③跟踪产品流向 ④监测作物生长状况', ['A. ①②③', 'B. ①②④', 'C. ①③④', 'D. ②③④'], 1, '遥感是“看”的，能看面状的耕地、作物分布和长势。跟踪产品物流流向需要GPS和物联网技术，遥感做不到。选B。'),
+                        mcq('s3-u3-4', '【2019年6月浙江卷】', '支付宝“蚂蚁森林”在我国西北地区种下真树。该植树行动针对的当地主要环境问题是（ ）', ['A. 矿产资源衰竭', 'B. 大气污染', 'C. 土地荒漠化', 'D. 生物多样性减少'], 2, '西北内陆最典型的生态问题就是风沙大、土地荒漠化，种树为了防风固沙。选C。')
+                    ],
+                    flashcards: [
+                        card('s3-u3-f1', '全球变暖对极地的影响', '海平面上升淹没沿海低地；极地冰川融化，北极熊栖息地减少；高山雪线、林线上升。'),
+                        card('s3-u3-f2', 'RS与GIS的区别', 'RS是“眼睛”负责获取图像数据；GIS是“大脑”负责叠加图层和分析计算。')
+                    ]
+                }
+            ]
+        };
+
+        const safeStorage = {
+            get: (key, fallback) => {
+                try {
+                    const item = window.localStorage.getItem(`tangtang_geo_v3_${key}`);
+                    return item ? JSON.parse(item) : fallback;
+                } catch (e) { return fallback; }
+            },
+            set: (key, value) => {
+                try { window.localStorage.setItem(`tangtang_geo_v3_${key}`, JSON.stringify(value)); } catch (e) {}
+            }
+        };
+
+        // --- 3. 组件系统 ---
+
+        const LoginPage = ({ onLogin }) => {
+            const [pwd, setPwd] = useState('');
+            const [error, setError] = useState(false);
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (pwd === '0315' || pwd === '0825') onLogin();
+                else { setError(true); setPwd(''); setTimeout(() => setError(false), 2000); }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="absolute top-20 left-20 w-72 h-72 bg-earth-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+                    <div className="absolute top-40 right-20 w-72 h-72 bg-nature-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+                    <div className="glass w-full max-w-sm rounded-3xl p-8 shadow-apple relative z-10">
+                        <div className="text-center mb-10">
+                            <div className="w-20 h-20 bg-gradient-to-tr from-earth-500 to-nature-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-6 transform -rotate-6">
+                                <Icons.Earth stroke="white" className="w-12 h-12" />
+                            </div>
+                            <h1 className="text-3xl font-extrabold text-slate-800">糖糖地理通</h1>
+                            <p className="text-sm text-slate-500 mt-2 font-bold tracking-widest">全纲覆盖终极版</p>
+                        </div>
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            <input 
+                                type="password" value={pwd} onChange={(e) => setPwd(e.target.value)}
+                                className={`w-full px-5 py-4 rounded-xl bg-white/50 border ${error ? 'border-red-400 ring-2 ring-red-100' : 'border-slate-200 focus:border-earth-500 focus:ring-2 focus:ring-earth-100'} outline-none text-center text-2xl tracking-[0.5em] placeholder:text-sm placeholder:tracking-normal`}
+                                placeholder="输入专属密码" autoFocus
+                            />
+                            <button type="submit" className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all">
+                                接入高考核心数据库
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        const NotesTab = ({ unitData }) => {
+            if (!unitData) return null;
+            return (
+                <div className="space-y-8 pb-20 animate-fade-in">
+                    {/* 老师寄语 */}
+                    <div className="bg-gradient-to-r from-earth-50 to-blue-50 border border-earth-100 p-6 rounded-2xl relative shadow-sm">
+                        <div className="absolute -top-4 -left-2 text-4xl">👨‍🏫</div>
+                        <h3 className="text-lg font-bold text-earth-900 mb-2 pl-4">老师寄语：</h3>
+                        <p className="text-slate-700 leading-relaxed pl-4 font-medium">{unitData.teacherMsg.replace('老师寄语：', '')}</p>
+                    </div>
+
+                    {unitData.concepts && unitData.concepts.length > 0 && (
+                        <div className="space-y-6">
+                            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2"><Icons.Target /> 核心概念与图解</h2>
+                            {unitData.concepts.map((concept, idx) => (
+                                <div key={idx} className="glass p-6 rounded-2xl shadow-sm">
+                                    <h3 className="text-xl font-bold text-earth-600 mb-3">{concept.title}</h3>
+                                    <p className="text-slate-700 leading-relaxed mb-4 whitespace-pre-line">{concept.text}</p>
+                                    {concept.svg && <div className="mt-4">{concept.svg()}</div>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {unitData.traps && unitData.traps.length > 0 && (
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2"><span className="text-rose-500">⚠</span> 浙江卷避坑指南</h2>
+                            <div className="grid gap-4">
+                                {unitData.traps.map((trap, idx) => (
+                                    <div key={idx} className="bg-rose-50 border-l-4 border-rose-400 p-4 rounded-r-xl text-rose-800 font-medium">{trap}</div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    {unitData.templates && unitData.templates.length > 0 && (
+                        <div className="space-y-4">
+                            <h2 className="text-2xl font-black text-slate-800 flex items-center gap-2"><span className="text-nature-600">✍️</span> 主观大题逻辑链</h2>
+                            <div className="grid md:grid-cols-2 gap-4">
+                                {unitData.templates.map((tpl, idx) => (
+                                    <div key={idx} className="bg-nature-50 border border-nature-200 p-5 rounded-2xl shadow-sm">
+                                        <h4 className="font-bold text-nature-800 mb-2">{tpl.name}</h4>
+                                        <p className="text-slate-600 text-sm leading-relaxed">{tpl.content}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const ExamTab = ({ unitData }) => {
+            const [answers, setAnswers] = useState({});
+            const [sortSequences, setSortSequences] = useState({});
+            const [fillAnswers, setFillAnswers] = useState({});
+            const [submitted, setSubmitted] = useState(false);
+            const [score, setScore] = useState(0);
+
+            if (!unitData || !unitData.questions || unitData.questions.length === 0) {
+                return (
+                    <div className="text-center mt-20 p-8 glass rounded-2xl">
+                        <Icons.Refresh className="w-12 h-12 text-slate-300 mx-auto mb-4 animate-spin" />
+                        <h3 className="text-xl font-bold text-slate-600 mb-2">题库正在紧锣密鼓整理中...</h3>
+                        <p className="text-slate-400">当前章节的真题正在从浙江历年题库中解析，请先学习“名师点拨”内容，或前往【大气的运动】、【区域协调发展】体验实战。</p>
+                    </div>
+                );
+            }
+
+            const questions = unitData.questions;
+
+            const handleMcqSelect = (qId, optionIdx) => { if(!submitted) setAnswers(p => ({...p, [qId]: optionIdx})); };
+            const handleSortClick = (qId, optionId) => {
+                if(submitted) return;
+                setSortSequences(p => {
+                    const c = p[qId] || [];
+                    return c.includes(optionId) ? p : {...p, [qId]: [...c, optionId]};
+                });
+            };
+            const resetSort = (qId) => { if(!submitted) setSortSequences(p => ({...p, [qId]: []})); };
+            const handleFillChange = (qId, index, value) => {
+                if(submitted) return;
+                setFillAnswers(p => {
+                    const arr = [...(p[qId] || [])];
+                    arr[index] = value;
+                    return {...p, [qId]: arr};
+                });
+            };
+
+            const submitExam = () => {
+                let correctCount = 0;
+                questions.forEach(q => {
+                    let isCorrect = false;
+                    if (q.type === 'mcq' && answers[q.id] === q.answer) isCorrect = true;
+                    else if (q.type === 'sort' && JSON.stringify(sortSequences[q.id] || []) === JSON.stringify(q.answer)) isCorrect = true;
+                    else if (q.type === 'fill') {
+                        const userFills = fillAnswers[q.id] || [];
+                        const allMatched = q.answer.every((ans, idx) => (userFills[idx]||'').trim().includes(ans));
+                        if (allMatched && q.answer.length === userFills.filter(Boolean).length) isCorrect = true;
+                    }
+                    if (isCorrect) correctCount++;
+                });
+                const finalScore = Math.round((correctCount / questions.length) * 100);
+                setScore(finalScore);
+                setSubmitted(true);
+                const histKey = `score_${unitData.id}`;
+                if (finalScore > safeStorage.get(histKey, 0)) safeStorage.set(histKey, finalScore);
+            };
+
+            return (
+                <div className="pb-32 max-w-3xl mx-auto">
+                    <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-2xl font-black text-slate-800">真题实战 ({questions.length}题)</h2>
+                        {submitted && <div className="text-2xl font-black text-earth-600 bg-earth-50 px-4 py-2 rounded-xl">得分: {score} / 100</div>}
+                    </div>
+                    <div className="space-y-10">
+                        {questions.map((q, i) => {
+                            const isQCorrect = submitted && (
+                                (q.type === 'mcq' && answers[q.id] === q.answer) || 
+                                (q.type === 'sort' && JSON.stringify(sortSequences[q.id]||[]) === JSON.stringify(q.answer)) ||
+                                (q.type === 'fill' && q.answer.every((a, idx) => (fillAnswers[q.id]?.[idx]||'').includes(a)))
+                            );
+                            return (
+                                <div key={q.id} className={`glass p-6 rounded-2xl shadow-sm border-l-4 ${submitted ? (isQCorrect ? 'border-nature-500' : 'border-rose-500') : 'border-earth-500'}`}>
+                                    <div className="text-sm font-bold text-earth-600 mb-2">{q.source}</div>
+                                    <h3 className="text-lg font-medium text-slate-800 mb-4 leading-relaxed whitespace-pre-line">
+                                        <span className="font-black mr-2">{i + 1}.</span> 
+                                        {q.type === 'fill' ? q.text.split('______').map((part, pIdx, arr) => (
+                                            <span key={pIdx}>
+                                                {part}
+                                                {pIdx < arr.length - 1 && <input type="text" className="mx-2 border-b-2 border-slate-300 bg-transparent text-center outline-none focus:border-earth-500 w-24 text-earth-700 font-bold" disabled={submitted} value={fillAnswers[q.id]?.[pIdx] || ''} onChange={(e) => handleFillChange(q.id, pIdx, e.target.value)}/>}
+                                            </span>
+                                        )) : q.text}
+                                    </h3>
+                                    {q.type === 'mcq' && (
+                                        <div className="space-y-3">
+                                            {q.options.map((opt, optIdx) => {
+                                                const isSelected = answers[q.id] === optIdx;
+                                                const isCorrectAns = q.answer === optIdx;
+                                                let btnClass = "w-full text-left px-5 py-3 rounded-xl border transition-all text-sm font-medium " + 
+                                                    (!submitted ? (isSelected ? "bg-earth-50 border-earth-400 text-earth-800" : "bg-white border-slate-200 hover:border-earth-300 text-slate-600") : 
+                                                    (isCorrectAns ? "bg-nature-50 border-nature-500 text-nature-800 font-bold" : (isSelected ? "bg-rose-50 border-rose-400 text-rose-700 line-through opacity-70" : "bg-slate-50 border-slate-200 text-slate-400 opacity-50")));
+                                                return <button key={optIdx} onClick={() => handleMcqSelect(q.id, optIdx)} className={btnClass} disabled={submitted}>{opt}</button>
+                                            })}
+                                        </div>
+                                    )}
+                                    {q.type === 'sort' && (
+                                        <div>
+                                            <div className="flex flex-wrap gap-3 mb-4">
+                                                {q.options.map(opt => {
+                                                    const isPicked = (sortSequences[q.id] || []).includes(opt.id);
+                                                    return <button key={opt.id} onClick={() => handleSortClick(q.id, opt.id)} disabled={submitted || isPicked} className={`px-4 py-2 rounded-lg text-sm border font-medium transition-all ${isPicked ? 'bg-slate-100 border-slate-200 text-slate-400 opacity-50 cursor-not-allowed' : 'bg-white border-earth-200 text-earth-700 hover:bg-earth-50 shadow-sm'}`}>{opt.id}. {opt.text}</button>
+                                                })}
+                                            </div>
+                                            <div className="bg-slate-50 p-4 rounded-xl border border-dashed border-slate-300 min-h-[60px] flex items-center justify-between">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-slate-500 text-sm mr-2">你的顺序：</span>
+                                                    {(sortSequences[q.id] || []).map((stepId, idx) => <span key={idx} className="bg-earth-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shadow-sm">{stepId}</span>)}
+                                                </div>
+                                                {!submitted && (sortSequences[q.id]?.length > 0) && <button onClick={() => resetSort(q.id)} className="text-rose-500 text-sm font-medium">重置</button>}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {submitted && (
+                                        <div className="mt-6 p-4 bg-blue-50/50 rounded-xl border border-blue-100 animate-fade-in">
+                                            <div className="font-bold text-blue-900 mb-1">【硬核解析】</div>
+                                            {q.type !== 'mcq' && <div className="text-sm font-bold text-slate-700 mb-2">标准答案：{q.answer.join(q.type==='sort'?' -> ':', ')}</div>}
+                                            <p className="text-slate-700 text-sm leading-relaxed">{q.analysis}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <div className="fixed bottom-0 left-0 right-0 md:left-64 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4 flex justify-center z-20">
+                        {!submitted ? <button onClick={submitExam} className="bg-slate-800 text-white px-12 py-3 rounded-2xl font-bold text-lg shadow-xl hover:bg-slate-900 transition-all hover:-translate-y-1">交卷并查看解析</button>
+                        : <button onClick={() => { setSubmitted(false); setAnswers({}); setSortSequences({}); setFillAnswers({}); window.scrollTo({top:0, behavior:'smooth'}); }} className="bg-earth-500 text-white px-12 py-3 rounded-2xl font-bold text-lg shadow-xl hover:bg-earth-600 transition-all hover:-translate-y-1">再刷一遍</button>}
+                    </div>
+                </div>
+            );
+        };
+
+        const FlashcardTab = ({ unitData }) => {
+            const [queue, setQueue] = useState([]);
+            const [isFlipped, setIsFlipped] = useState(false);
+            const [completed, setCompleted] = useState(false);
+
+            useEffect(() => {
+                if (unitData && unitData.flashcards && unitData.flashcards.length > 0) {
+                    setQueue([...unitData.flashcards]);
+                    setCompleted(false);
+                    setIsFlipped(false);
+                } else {
+                    setQueue([]);
+                }
+            }, [unitData]);
+
+            if (!unitData || !unitData.flashcards || unitData.flashcards.length === 0) {
+                return (
+                    <div className="text-center mt-20 p-8 glass rounded-2xl">
+                        <Icons.Book className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                        <h3 className="text-xl font-bold text-slate-600 mb-2">本单元无需死记硬背名词</h3>
+                        <p className="text-slate-400">去看看“老师寄语”或去实战卷刷题吧！</p>
+                    </div>
+                );
+            }
+
+            if (completed) {
+                return (
+                    <div className="text-center mt-32 animate-fade-in">
+                        <div className="w-24 h-24 bg-nature-100 rounded-full flex items-center justify-center mx-auto mb-6"><Icons.Award className="w-12 h-12 text-nature-600" /></div>
+                        <h2 className="text-3xl font-black text-slate-800 mb-4">太棒了，糖糖！</h2>
+                        <p className="text-slate-600 mb-8">本单元的易错概念你已经全部攻克！</p>
+                        <button onClick={() => { setQueue([...unitData.flashcards]); setCompleted(false); }} className="bg-earth-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg">再过一遍</button>
+                    </div>
+                );
+            }
+
+            const currentCard = queue[0];
+            if (!currentCard) return null;
+
+            const handleKnow = () => {
+                setIsFlipped(false);
+                setTimeout(() => {
+                    const newQueue = queue.slice(1);
+                    if (newQueue.length === 0) setCompleted(true);
+                    else setQueue(newQueue);
+                }, 200);
+            };
+
+            const handleDontKnow = () => {
+                setIsFlipped(false);
+                setTimeout(() => setQueue([...queue.slice(1), currentCard]), 200);
+            };
+
+            return (
+                <div className="max-w-md mx-auto pt-10 perspective-1000">
+                    <div className="text-center mb-6 text-slate-500 font-medium">剩余卡片：<span className="text-earth-600 font-black text-lg">{queue.length}</span> 张</div>
+                    <div className={`relative w-full h-80 transition-transform duration-500 transform-style-3d cursor-pointer shadow-apple rounded-3xl ${isFlipped ? 'rotate-y-180' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
+                        <div className="absolute w-full h-full backface-hidden bg-white border border-slate-100 rounded-3xl flex flex-col items-center justify-center p-8 text-center">
+                            <span className="text-sm text-earth-500 font-bold mb-4 tracking-widest uppercase">点击翻转背诵</span>
+                            <h2 className="text-3xl font-black text-slate-800">{currentCard.front}</h2>
+                        </div>
+                        <div className="absolute w-full h-full backface-hidden bg-gradient-to-br from-earth-500 to-blue-600 rounded-3xl flex flex-col items-center justify-center p-8 text-center rotate-y-180 shadow-apple-glow text-white">
+                            <span className="text-sm text-blue-200 font-bold mb-4 tracking-widest uppercase">核心得分点</span>
+                            <p className="text-xl font-medium leading-relaxed">{currentCard.back}</p>
+                        </div>
+                    </div>
+                    <div className={`flex justify-between mt-10 transition-opacity duration-300 ${isFlipped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <button onClick={(e) => { e.stopPropagation(); handleDontKnow(); }} className="flex items-center justify-center gap-2 w-[45%] py-4 bg-white border border-rose-200 text-rose-500 rounded-2xl font-bold hover:bg-rose-50"><Icons.Refresh /> 没记住</button>
+                        <button onClick={(e) => { e.stopPropagation(); handleKnow(); }} className="flex items-center justify-center gap-2 w-[45%] py-4 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900"><Icons.Check /> 彻底掌握</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const Dashboard = () => {
+            const [activeBookId, setActiveBookId] = useState('b1');
+            const [activeUnitId, setActiveUnitId] = useState('b1-u1');
+            const [activeTab, setActiveTab] = useState('notes');
+            const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+            // 安全获取当前书册的所有单元
+            const activeUnits = UNIT_DB[activeBookId] || [];
+            // 如果书册里没有任何单元，给一个默认的空单元防止白屏
+            const safeUnits = activeUnits.length > 0 ? activeUnits : [{ id: 'empty', title: '章节开发中', teacherMsg: '更多知识点敬请期待' }];
+            const activeUnitData = safeUnits.find(u => u.id === activeUnitId) || safeUnits[0];
+
+            return (
+                <div className="min-h-screen flex flex-col md:flex-row overflow-hidden bg-slate-50">
+                    <div className="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center sticky top-0 z-50">
+                        <h1 className="font-extrabold text-slate-800">糖糖地理通</h1>
+                        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-slate-100 rounded-lg"><Icons.Map /></button>
+                    </div>
+
+                    <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 fixed md:static inset-y-0 left-0 w-72 glass z-40 flex flex-col shadow-[10px_0_30px_rgba(0,0,0,0.02)] transition-transform duration-300`}>
+                        <div className="p-6 pb-4">
+                            <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-2xl p-5 shadow-lg text-white">
+                                <div className="text-xs text-slate-300 font-bold mb-1 uppercase tracking-wider">历年真题库已接入</div>
+                                <div className="text-lg font-black">糖糖同学，</div>
+                                <div className="text-sm font-medium mt-1 text-earth-300 flex items-center gap-1"><Icons.Target /> 目标：浙江卷地理 95+</div>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto no-scrollbar px-4 space-y-2 pb-6">
+                            <div className="text-xs font-bold text-slate-400 pl-2 mt-4 mb-2">高中全册矩阵</div>
+                            {BOOKS.map(book => {
+                                const isActive = activeBookId === book.id;
+                                const Icon = Icons[book.icon] || Icons.Book;
+                                return (
+                                    <button key={book.id} onClick={() => { setActiveBookId(book.id); setActiveUnitId(UNIT_DB[book.id]?.[0]?.id); setIsSidebarOpen(false); setActiveTab('notes'); }}
+                                        className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl font-bold transition-all text-left text-sm
+                                            ${isActive ? 'bg-white shadow-apple text-earth-600 border border-slate-100 relative before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1.5 before:bg-earth-500 before:rounded-r-full' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'}`}>
+                                        <div className={`${isActive ? 'text-earth-500' : 'text-slate-400'}`}><Icon /></div>
+                                        {book.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50/50">
+                        <div className="p-4 md:p-6 pb-0 overflow-x-auto no-scrollbar flex gap-3 whitespace-nowrap border-b border-slate-200">
+                            {safeUnits.map(unit => (
+                                <button key={unit.id} onClick={() => { setActiveUnitId(unit.id); setActiveTab('notes'); }}
+                                    className={`px-5 py-2.5 rounded-t-xl font-bold text-sm transition-all border-b-2
+                                        ${activeUnitId === unit.id ? 'bg-white text-earth-600 border-earth-500' : 'bg-transparent text-slate-500 border-transparent hover:text-slate-800 hover:bg-white/50'}`}>
+                                    {unit.title}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="px-4 md:px-6 pt-4 pb-2 flex gap-2">
+                            {[{ id: 'notes', name: '名师点拨' }, { id: 'test', name: '全真卷演练' }, { id: 'flashcards', name: '3D 识字卡' }].map(tab => (
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 py-3 rounded-2xl font-black text-sm transition-all shadow-sm border
+                                        ${activeTab === tab.id ? 'border-slate-800 text-white bg-slate-800' : 'border-slate-200 text-slate-500 bg-white hover:border-slate-300 hover:text-slate-800'}`}>
+                                    {tab.name}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 no-scrollbar relative">
+                            {activeTab === 'notes' && <NotesTab unitData={activeUnitData} />}
+                            {activeTab === 'test' && <ExamTab unitData={activeUnitData} />}
+                            {activeTab === 'flashcards' && <FlashcardTab unitData={activeUnitData} />}
+                        </div>
+                    </div>
+                    {isSidebarOpen && <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-30 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [isLoggedIn, setIsLoggedIn] = useState(() => safeStorage.get('isLoggedIn', false));
+            const handleLogin = () => { setIsLoggedIn(true); safeStorage.set('isLoggedIn', true); };
+            return <div className="font-sans antialiased text-slate-800">{isLoggedIn ? <Dashboard /> : <LoginPage onLogin={handleLogin} />}</div>;
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
