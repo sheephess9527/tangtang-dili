@@ -194,6 +194,9 @@
     .mt-0\.5 { margin-top: .125rem; }
     .py-1\.5 { padding-top: .375rem; padding-bottom: .375rem; }
     .p-2 { padding: .5rem; }
+    .border-emerald-500 { border-color: var(--success); }
+    .border-red-400 { border-color: var(--danger); }
+    .bg-emerald-50 { background-color: var(--success-soft); }
     @media (min-width: 1024px) { .lg\:p-5 { padding: 1.25rem; } }
 
     @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .side { position: static; height: auto; } }
@@ -1628,7 +1631,20 @@ function Question({
   onChange
 }) {
   const fill = q.type === "fill";
+  const [touched, setTouched] = useState(false);
+  const hasInput = fill ? String(value || "").trim().length > 0 : value !== undefined && value !== null && value !== "";
   const ok = fill ? fillCorrect(value, q.answer) : Number(value) === q.answer;
+  // 答完即判：选择题选中即揭晓，填空题失焦或答对时揭晓
+  const reveal = done || ok || (fill ? touched && hasInput : hasInput);
+  const correctText = fill ? q.answer : String.fromCharCode(65 + q.answer) + ". " + q.options[q.answer];
+  function optionClass(i) {
+    if (reveal) {
+      if (i === q.answer) return "border-emerald-500 bg-emerald-50 text-emerald-700";
+      if (Number(value) === i) return "border-red-400 bg-red-50 text-red-600";
+      return "border-slate-100 bg-white/70 text-slate-700";
+    }
+    return Number(value) === i ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-100 bg-white/70 text-slate-700 hover:bg-orange-50";
+  }
   return React.createElement("article", {
     className: "rounded-3xl border border-slate-100 bg-white p-4 shadow-sm"
   }, React.createElement("div", {
@@ -1637,26 +1653,31 @@ function Question({
     className: "text-xs font-black text-emerald-600"
   }, q.source), React.createElement("h4", {
     className: "mt-1 text-lg font-black"
-  }, index + 1, ". ", q.title)), done && React.createElement("span", {
+  }, index + 1, ". ", q.title)), reveal && React.createElement("span", {
     className: "h-7 rounded-full px-3 py-1 text-xs font-black " + (ok ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600")
-  }, ok ? "正确" : "需强化")), React.createElement("p", {
+  }, ok ? "回答正确" : "答错了")), React.createElement("p", {
     className: "mt-3 leading-7 text-slate-700"
   }, q.stem), fill ? React.createElement("input", {
     value: value || "",
     onChange: e => onChange(e.target.value),
-    placeholder: "\u586B\u5199\u5173\u952E\u8BCD",
-    className: "mt-3 h-12 w-full rounded-2xl border border-orange-100 bg-orange-50/60 px-4 font-bold outline-none focus:border-orange-400"
+    onBlur: () => setTouched(true),
+    placeholder: "\u586B\u5199\u5173\u952E\u8BCD\uFF08\u586B\u5B8C\u70B9\u51FB\u7A7A\u767D\u5904\u81EA\u52A8\u5224\u65AD\uFF09",
+    className: "mt-3 h-12 w-full rounded-2xl border bg-orange-50/60 px-4 font-bold outline-none focus:border-orange-400 " + (reveal ? ok ? "border-emerald-500" : "border-red-400" : "border-orange-100")
   }) : React.createElement("div", {
     className: "mt-3 grid gap-2"
   }, q.options.map((op, i) => React.createElement("button", {
     key: i,
     onClick: () => onChange(i),
-    className: "rounded-2xl border p-3 text-left text-sm font-bold leading-6 transition " + (Number(value) === i ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-100 bg-white/70 text-slate-700 hover:bg-orange-50")
-  }, String.fromCharCode(65 + i), ". ", op))), done && React.createElement("div", {
-    className: "mt-3 rounded-2xl bg-slate-50 p-3 text-sm leading-7 text-slate-700"
-  }, React.createElement("b", null, "\u89E3\u6790\uFF1A"), q.explain, React.createElement("span", {
-    className: "ml-2 font-black text-orange-600"
-  }, "\u7B54\u6848\uFF1A", fill ? q.answer : String.fromCharCode(65 + q.answer))));
+    className: "rounded-2xl border p-3 text-left text-sm font-bold leading-6 transition " + optionClass(i)
+  }, String.fromCharCode(65 + i), ". ", op))), reveal && React.createElement("div", {
+    className: "mt-3 rounded-2xl p-3 text-sm leading-7 text-slate-700 " + (ok ? "bg-emerald-50" : "bg-red-50")
+  }, !ok && React.createElement("p", {
+    className: "font-black text-red-600"
+  }, "\u6B63\u786E\u7B54\u6848\uFF1A", correctText), React.createElement("p", {
+    className: ok ? "" : "mt-1"
+  }, React.createElement("b", {
+    className: ok ? "text-emerald-700" : "text-slate-800"
+  }, ok ? "\u89E3\u6790\uFF1A" : "\u6B63\u786E\u903B\u8F91\uFF1A"), q.explain)));
 }
 function Cards({
   unit,
