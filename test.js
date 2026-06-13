@@ -32,7 +32,7 @@ setTimeout(() => {
   win.React = { Component: class {}, createElement: () => null };
   win.ReactDOM = {};
   // expose inner functions after running the (de-rendered) script
-  const exposer = "\n;window.__T = { makeExam, fillCorrect, pick, shuffleWithAnswer, BOOKS, allUnits, sourceFor };";
+  const exposer = "\n;window.__T = { makeExam, fillCorrect, pick, shuffleWithAnswer, BOOKS, allUnits, sourceFor, DATA };";
   win.eval(appJs + exposer);
   const T = win.__T;
 
@@ -53,10 +53,10 @@ setTimeout(() => {
   ok(sh.options[sh.answer] === "CORRECT", "shuffleWithAnswer: answer index points to correct option");
 
   // makeExam over every unit
-  let totalChoiceSort = 0, ansZero = 0, allTwenty = true, answerValid = true, distinctAnsSeen = {};
+  let totalChoiceSort = 0, ansZero = 0, atLeastTwenty = true, answerValid = true, distinctAnsSeen = {};
   T.allUnits().forEach(u => {
     const qs = T.makeExam(u);
-    if (qs.length !== 20) allTwenty = false;
+    if (qs.length < 20) atLeastTwenty = false;
     qs.forEach(q => {
       if (q.type === "choice" || q.type === "sort") {
         totalChoiceSort++;
@@ -66,8 +66,16 @@ setTimeout(() => {
       }
     });
   });
-  ok(allTwenty, "makeExam: every unit yields exactly 20 questions");
+  ok(atLeastTwenty, "makeExam: every unit yields at least 20 questions");
   ok(answerValid, "makeExam: every choice/sort answer index is within options range");
+
+  // every real-bank question must surface in some unit's exam (no question stranded)
+  const allRealStems = new Set(T.DATA.realBank.map(q => q.stem));
+  const surfacedStems = new Set();
+  T.allUnits().forEach(u => T.makeExam(u).forEach(q => surfacedStems.add(q.stem)));
+  let strandedCount = 0;
+  allRealStems.forEach(stem => { if (!surfacedStems.has(stem)) strandedCount++; });
+  ok(strandedCount === 0, "makeExam: every realBank question appears in some unit exam (stranded=" + strandedCount + ")");
   ok(ansZero < totalChoiceSort, "makeExam: answers are NOT all option A (was the bug). zero=" + ansZero + "/" + totalChoiceSort);
   ok(Object.keys(distinctAnsSeen).length >= 3, "makeExam: answer indices spread across >=3 positions -> " + JSON.stringify(distinctAnsSeen));
 
