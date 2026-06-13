@@ -875,7 +875,16 @@ function sourceFor(unit) {
   return ids.map(id => REAL_BANK.find(q => q.id === id)).filter(Boolean);
 }
 function makeExam(unit) {
-  const linked = sourceFor(unit);
+  const rawLinked = sourceFor(unit);
+  // Deterministic Fisher-Yates shuffle keyed on unit.id so every question gets fair rotation
+  const linked = [...rawLinked];
+  const week = Math.floor(Date.now() / (7 * 24 * 3600 * 1000));
+  let s = (unit.id.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0) + week * 2654435761) >>> 0;
+  for (let i = linked.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    const j = s % (i + 1);
+    [linked[i], linked[j]] = [linked[j], linked[i]];
+  }
   const questions = [];
   const seen = {};
   linked.forEach((q, i) => {
