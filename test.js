@@ -1,0 +1,82 @@
+const fs = require("fs");
+const { JSDOM } = require("jsdom");
+
+let pass = 0, fail = 0;
+function ok(cond, msg) { if (cond) { pass++; } else { fail++; console.log("  FAIL:", msg); } }
+
+// ---------- Part A: full-page render smoke test (real React + ReactDOM + compiled app) ----------
+const html = fs.readFileSync("/home/user/tangtang-dili/index.html", "utf8");
+const errors = [];
+const dom = new JSDOM(html, {
+  runScripts: "dangerously",
+  pretendToBeVisual: true,
+  beforeParse(window) {
+    window.addEventListener("error", e => errors.push(String(e.error || e.message)));
+    const origErr = window.console.error;
+    window.console.error = (...a) => { errors.push(a.join(" ")); };
+  },
+});
+// allow microtasks/render
+setTimeout(() => {
+  const root = dom.window.document.getElementById("root");
+  ok(root && root.innerHTML.length > 0, "Part A: #root is rendered (non-empty)");
+  ok(/进入学习|糖糖地理通/.test(root.textContent), "Part A: login screen text present");
+  ok(errors.length === 0, "Part A: no runtime errors/console.error -> " + JSON.stringify(errors.slice(0,3)));
+
+  // ---------- Part B: pure-logic tests on the compiled functions ----------
+  let appJs = fs.readFileSync("/tmp/app.compiled.js", "utf8");
+  // neutralize the final render IIFE so nothing touches ReactDOM
+  appJs = appJs.replace(/\(function\s*\(\)\s*\{\s*const rootEl[\s\S]*?\}\)\(\);\s*$/, "");
+  const dom2 = new JSDOM(html, { runScripts: "outside-only" });
+  const win = dom2.window;
+  win.React = { Component: class {}, createElement: () => null };
+  win.ReactDOM = {};
+  // expose inner functions after running the (de-rendered) script
+  const exposer = "\n;window.__T = { makeExam, fillCorrect, pick, shuffleWithAnswer, BOOKS, allUnits, sourceFor };";
+  win.eval(appJs + exposer);
+  const T = win.__T;
+
+  ok(typeof T.makeExam === "function", "Part B: makeExam exposed");
+
+  // fillCorrect (#5)
+  ok(T.fillCorrect("", "日地关系") === false, "fillCorrect: empty input -> false");
+  ok(T.fillCorrect("我答日地关系对", "日地关系") === true, "fillCorrect: substring match -> true");
+  ok(T.fillCorrect("任意内容", "") === false, "fillCorrect: empty answer -> false (no free points)");
+  ok(T.fillCorrect("   ", "x") === false, "fillCorrect: whitespace only -> false");
+
+  // pick (#6) safety
+  ok(T.pick([], 3) === "", "pick: empty array -> '' (no NaN index)");
+  ok(T.pick(["a","b"], 5) === "b", "pick: wraps with modulo");
+
+  // shuffle correctness (#3): answer index always points to the originally-correct option
+  const sh = T.shuffleWithAnswer(["CORRECT","w1","w2","w3"], 0, 12345);
+  ok(sh.options[sh.answer] === "CORRECT", "shuffleWithAnswer: answer index points to correct option");
+
+  // makeExam over every unit
+  let totalChoiceSort = 0, ansZero = 0, allTwenty = true, answerValid = true, distinctAnsSeen = {};
+  T.allUnits().forEach(u => {
+    const qs = T.makeExam(u);
+    if (qs.length !== 20) allTwenty = false;
+    qs.forEach(q => {
+      if (q.type === "choice" || q.type === "sort") {
+        totalChoiceSort++;
+        if (q.answer === 0) ansZero++;
+        if (!Array.isArray(q.options) || q.answer < 0 || q.answer >= q.options.length) answerValid = false;
+        distinctAnsSeen[q.answer] = (distinctAnsSeen[q.answer] || 0) + 1;
+      }
+    });
+  });
+  ok(allTwenty, "makeExam: every unit yields exactly 20 questions");
+  ok(answerValid, "makeExam: every choice/sort answer index is within options range");
+  ok(ansZero < totalChoiceSort, "makeExam: answers are NOT all option A (was the bug). zero=" + ansZero + "/" + totalChoiceSort);
+  ok(Object.keys(distinctAnsSeen).length >= 3, "makeExam: answer indices spread across >=3 positions -> " + JSON.stringify(distinctAnsSeen));
+
+  // determinism: same unit -> same shuffle across calls
+  const u0 = T.allUnits()[0];
+  const a = T.makeExam(u0).map(q => q.answer).join(",");
+  const b = T.makeExam(u0).map(q => q.answer).join(",");
+  ok(a === b, "makeExam: deterministic across calls (stable option order)");
+
+  console.log(`\n${pass} passed, ${fail} failed`);
+  process.exit(fail ? 1 : 0);
+}, 300);
