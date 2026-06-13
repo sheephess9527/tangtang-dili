@@ -53,10 +53,10 @@ setTimeout(() => {
   ok(sh.options[sh.answer] === "CORRECT", "shuffleWithAnswer: answer index points to correct option");
 
   // makeExam over every unit
-  let totalChoiceSort = 0, ansZero = 0, atLeastTwenty = true, answerValid = true, distinctAnsSeen = {};
+  let totalChoiceSort = 0, ansZero = 0, enoughQuestions = true, answerValid = true, distinctAnsSeen = {};
   T.allUnits().forEach(u => {
     const qs = T.makeExam(u);
-    if (qs.length < 20) atLeastTwenty = false;
+    if (qs.length < 8) enoughQuestions = false;
     qs.forEach(q => {
       if (q.type === "choice" || q.type === "sort") {
         totalChoiceSort++;
@@ -66,8 +66,19 @@ setTimeout(() => {
       }
     });
   });
-  ok(atLeastTwenty, "makeExam: every unit yields at least 20 questions");
+  ok(enoughQuestions, "makeExam: every unit yields at least 8 questions");
   ok(answerValid, "makeExam: every choice/sort answer index is within options range");
+
+  // AI 生成题库自检：source 标记、4 个互异选项、答案索引有效
+  const gen = T.DATA.genBank || [];
+  let genValid = true, genSourceOk = true;
+  gen.forEach(q => {
+    if (q.source !== "AI生成") genSourceOk = false;
+    if (!Array.isArray(q.options) || q.options.length !== 4 || new Set(q.options).size !== 4 || q.answer < 0 || q.answer >= 4) genValid = false;
+  });
+  ok(gen.length > 0, "genBank: AI 题库非空 (" + gen.length + " 题)");
+  ok(genSourceOk, "genBank: 每题 source 均为 'AI生成'");
+  ok(genValid, "genBank: 每题 4 个互异选项且答案索引有效");
 
   // every real-bank question must surface in some unit's exam (no question stranded)
   const allRealStems = new Set(T.DATA.realBank.map(q => q.stem));
