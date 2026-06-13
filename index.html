@@ -200,9 +200,12 @@
     .mt-0\.5 { margin-top: .125rem; }
     .py-1\.5 { padding-top: .375rem; padding-bottom: .375rem; }
     .p-2 { padding: .5rem; }
+    .py-2\.5 { padding-top: .625rem; padding-bottom: .625rem; }
     .border-emerald-500 { border-color: var(--success); }
     .border-red-400 { border-color: var(--danger); }
     .bg-emerald-50 { background-color: var(--success-soft); }
+    .bg-slate-300 { background-color: #CBD5E1; }
+    .opacity-60 { opacity: .6; }
     @media (min-width: 1024px) { .lg\:p-5 { padding: 1.25rem; } }
 
     @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .side { position: static; height: auto; } }
@@ -1492,7 +1495,8 @@ function Learn({
 function Exam({
   unit,
   progress,
-  setProgress
+  setProgress,
+  setTab
 }) {
   const questions = useMemo(() => makeExam(unit), [unit.id]);
   const saved = progress.exam[unit.id] || {};
@@ -1512,24 +1516,25 @@ function Exam({
     const next = Object.assign({}, answers);
     next[id] = val;
     setAnswers(next);
-    // 实时保存刷题进度（答题即记录，掌握度随之更新）
-    const liveScore = questions.reduce((sum, q) => {
-      const v = next[q.id];
-      if (q.type === "fill") return sum + (fillCorrect(v, q.answer) ? 5 : 0);
-      return sum + (Number(v) === q.answer ? 5 : 0);
+    // 实时保存：答错即入错题本（增量维护），答对则移出
+    const q = questions.find(x => x.id === id);
+    const correct = q ? q.type === "fill" ? fillCorrect(val, q.answer) : Number(val) === q.answer : true;
+    const liveScore = questions.reduce((sum, qq) => {
+      const v = next[qq.id];
+      if (qq.type === "fill") return sum + (fillCorrect(v, qq.answer) ? 5 : 0);
+      return sum + (Number(v) === qq.answer ? 5 : 0);
     }, 0);
-    const wrong = questions.filter(q => {
-      const v = next[q.id];
-      if (v === undefined || v === null || v === "") return false;
-      return q.type === "fill" ? !fillCorrect(v, q.answer) : Number(v) !== q.answer;
-    }).map(q => q.id);
     const prev = progress.exam[unit.id] || {};
+    const wrongSet = new Set(prev.wrong || []);
+    if (q) {
+      if (correct) wrongSet.delete(id);else wrongSet.add(id);
+    }
     const nextExam = Object.assign({}, progress.exam);
     nextExam[unit.id] = {
       answers: next,
       done: prev.done || false,
       best: Math.max(prev.best || 0, liveScore),
-      wrong: wrong
+      wrong: Array.from(wrongSet)
     };
     const np = Object.assign({}, progress, {
       exam: nextExam
@@ -1537,31 +1542,16 @@ function Exam({
     setProgress(np);
     store.set("geo-progress-v2", np);
   }
-  function submit() {
-    const wrong = questions.filter(q => q.type === "fill" ? !fillCorrect(answers[q.id], q.answer) : Number(answers[q.id]) !== q.answer).map(q => q.id);
-    const nextExam = Object.assign({}, progress.exam);
-    nextExam[unit.id] = {
-      answers: answers,
-      done: true,
-      best: Math.max(saved.best || 0, score),
-      wrong: wrong
-    };
-    const next = Object.assign({}, progress, {
-      exam: nextExam
-    });
-    setProgress(next);
-    setDone(true);
-    store.set("geo-progress-v2", next);
-  }
   function reset() {
     setAnswers({});
     setDone(false);
+    const prev = progress.exam[unit.id] || {};
     const nextExam = Object.assign({}, progress.exam);
     nextExam[unit.id] = {
       answers: {},
       done: false,
-      best: saved.best || 0,
-      wrong: []
+      best: prev.best || 0,
+      wrong: prev.wrong || []
     };
     const next = Object.assign({}, progress, {
       exam: nextExam
@@ -1569,6 +1559,7 @@ function Exam({
     setProgress(next);
     store.set("geo-progress-v2", next);
   }
+  const wrongCount = (progress.exam[unit.id] || {}).wrong ? progress.exam[unit.id].wrong.length : 0;
   return React.createElement("section", {
     className: "glass rounded-[28px] p-5"
   }, React.createElement("div", {
@@ -1577,13 +1568,13 @@ function Exam({
     className: "text-2xl font-black"
   }, "\u6D59\u6C5F\u771F\u9898\u5B9E\u6218"), React.createElement("p", {
     className: "mt-1 text-sm font-semibold text-slate-500"
-  }, "\u672C\u5355\u5143 " + questions.length + " \u9898 \xB7 \u771F\u9898\u6BCD\u9898 + \u903B\u8F91\u6392\u5E8F + \u6A21\u677F\u586B\u7A7A")), React.createElement("div", {
+  }, "\u672C\u5355\u5143 " + questions.length + " \u9898 \u00B7 \u7B54\u9519\u4F1A\u81EA\u52A8\u8FDB\u5165\u9519\u9898\u672C")), React.createElement("div", {
     className: "rounded-2xl bg-white/80 px-5 py-3 text-right"
   }, React.createElement("p", {
     className: "text-xs font-black text-slate-500"
   }, "\u5F97\u5206"), React.createElement("p", {
     className: "text-2xl font-black text-orange-600"
-  }, done ? score + " / " + questions.length * 5 : "待提交"), React.createElement("p", {
+  }, score + " / " + questions.length * 5), React.createElement("p", {
     className: "text-xs font-black text-emerald-600"
   }, "\u5386\u53F2\u6700\u9AD8 ", saved.best || 0))), React.createElement("div", {
     className: "mt-5 space-y-4"
@@ -1599,10 +1590,11 @@ function Exam({
   }, React.createElement("button", {
     onClick: reset,
     className: "rounded-2xl bg-slate-100 px-5 py-3 font-black text-slate-700"
-  }, "\u91CD\u505A\u672C\u5377"), React.createElement("button", {
-    onClick: submit,
-    className: "rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-6 py-3 font-black text-white shadow-lg"
-  }, "\u63D0\u4EA4\u5E76\u6536\u5F55\u9519\u9898")));
+  }, "\u91CD\u505A\u672C\u5355\u5143"), React.createElement("button", {
+    onClick: () => setTab && setTab("wrong"),
+    disabled: wrongCount === 0,
+    className: "rounded-2xl px-6 py-3 font-black text-white shadow-lg " + (wrongCount === 0 ? "bg-slate-300" : "bg-gradient-to-r from-orange-500 to-amber-400")
+  }, wrongCount === 0 ? "\u6682\u65E0\u9519\u9898" : "\u53BB\u9519\u9898\u672C\u5DE9\u56FA (" + wrongCount + ")")));
 }
 function Question({
   q,
@@ -1761,37 +1753,83 @@ function Cards({
 }
 function Wrong({
   unit,
-  progress
+  progress,
+  setProgress,
+  setTab
 }) {
-  const questions = makeExam(unit);
-  const wrongIds = (progress.exam[unit.id] || {}).wrong || [];
-  const wrong = questions.filter(q => wrongIds.includes(q.id));
+  const all = useMemo(() => makeExam(unit), [unit.id]);
+  const [round, setRound] = useState(0);
+  const [items, setItems] = useState([]);
+  const [ans, setAns] = useState({});
+  // \u5FEB\u7167\uFF1A\u4EC5\u5728\u5207\u6362\u5355\u5143\u6216\u70B9"\u91CD\u65B0\u7EC3\u4E60"\u65F6\u91CD\u5EFA\uFF0C\u7B54\u5BF9\u79FB\u51FA\u540E\u9898\u76EE\u4ECD\u7559\u5728\u672C\u8F6E\u5217\u8868\u91CC\u663E\u793A\u53CD\u9988
+  useEffect(() => {
+    const cur = (progress.exam[unit.id] || {}).wrong || [];
+    const built = all.filter(q => cur.includes(q.id)).map(q => {
+      if (q.type === "fill") return Object.assign({}, q);
+      const sh = shuffleWithAnswer(q.options, q.answer, hashStr(q.id + "-wr" + round));
+      return Object.assign({}, q, {
+        options: sh.options,
+        answer: sh.answer
+      });
+    });
+    setItems(built);
+    setAns({});
+  }, [unit.id, round]);
+  const remaining = ((progress.exam[unit.id] || {}).wrong || []).length;
+  function onAnswer(q, val) {
+    setAns(prev => Object.assign({}, prev, {
+      [q.id]: val
+    }));
+    const ok = q.type === "fill" ? fillCorrect(val, q.answer) : Number(val) === q.answer;
+    if (ok) {
+      const prev = progress.exam[unit.id] || {};
+      const nw = (prev.wrong || []).filter(id => id !== q.id);
+      const nextExam = Object.assign({}, progress.exam, {
+        [unit.id]: Object.assign({}, prev, {
+          wrong: nw
+        })
+      });
+      const np = Object.assign({}, progress, {
+        exam: nextExam
+      });
+      setProgress(np);
+      store.set("geo-progress-v2", np);
+    }
+  }
   return React.createElement("section", {
     className: "glass rounded-[28px] p-5"
-  }, React.createElement("h3", {
+  }, React.createElement("div", {
+    className: "flex flex-wrap items-start justify-between gap-3"
+  }, React.createElement("div", null, React.createElement("h3", {
     className: "text-2xl font-black"
-  }, "\u9519\u9898\u4E13\u9879\u5F3A\u5316"), React.createElement("p", {
-    className: "mt-1 text-sm font-bold text-slate-500"
-  }, "\u63D0\u4EA4\u8BAD\u7EC3\u540E\u81EA\u52A8\u6536\u5F55\uFF0C\u6309\u89E3\u6790\u91CD\u7EC3"), React.createElement("div", {
-    className: "mt-5 space-y-3"
-  }, wrong.length ? wrong.map((q, i) => React.createElement("article", {
-    key: q.id,
-    className: "rounded-3xl bg-white/75 p-4"
+  }, "\u9519\u9898\u672C"), React.createElement("p", {
+    className: "mt-1 text-sm font-semibold text-slate-500"
+  }, "\u505A\u9519\u7684\u9898\u81EA\u52A8\u6536\u96C6\u5230\u8FD9\u91CC\uFF0C\u7B54\u5BF9\u5373\u79FB\u51FA \u00B7 \u9009\u9879\u5DF2\u91CD\u65B0\u6392\u5E8F")), items.length ? React.createElement("button", {
+    onClick: () => setRound(round + 1),
+    className: "shrink-0 rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-700"
+  }, "\u91CD\u65B0\u7EC3\u4E60") : null), items.length ? React.createElement("div", {
+    className: "mt-5 space-y-4"
   }, React.createElement("p", {
-    className: "text-xs font-black text-red-500"
-  }, q.source), React.createElement("p", {
-    className: "mt-1 font-semibold leading-7 text-slate-800"
-  }, React.createElement("b", {
-    className: "text-slate-900"
-  }, i + 1, ". "), q.stem), React.createElement("p", {
-    className: "mt-2 rounded-2xl bg-red-50 p-3 text-sm leading-7 text-slate-700"
-  }, React.createElement("b", null, "\u5F3A\u5316\u89E3\u6790\uFF1A"), q.explain))) : React.createElement("div", {
-    className: "rounded-[30px] bg-white/75 p-10 text-center"
+    className: "text-xs font-black text-orange-600"
+  }, "\u5269\u4F59 " + remaining + " / " + items.length + " \u9053\u672A\u638C\u63E1"), items.map((q, i) => React.createElement("div", {
+    key: q.id,
+    className: ans[q.id] !== undefined && (q.type === "fill" ? fillCorrect(ans[q.id], q.answer) : Number(ans[q.id]) === q.answer) ? "opacity-60" : ""
+  }, React.createElement(Question, {
+    q: q,
+    index: i,
+    value: ans[q.id],
+    done: false,
+    onChange: v => onAnswer(q, v)
+  })))) : React.createElement("div", {
+    className: "mt-6 rounded-[30px] bg-slate-50 p-10 text-center"
   }, React.createElement("p", {
     className: "text-2xl font-black text-emerald-600"
-  }, "\u5F53\u524D\u6CA1\u6709\u9519\u9898"), React.createElement("p", {
-    className: "mt-2 font-bold text-slate-500"
-  }, "\u5148\u5B8C\u6210\u5E76\u63D0\u4EA4\u672C\u5355\u5143 20 \u9898\u8BAD\u7EC3\u3002"))));
+  }, "\u672C\u5355\u5143\u6682\u65E0\u9519\u9898"), React.createElement("p", {
+    className: "mt-2 text-sm font-semibold text-slate-500"
+  }, "\u53BB\u771F\u9898\u5B9E\u6218\u5237\u51E0\u9053\uFF0C\u7B54\u9519\u7684\u9898\u4F1A\u81EA\u52A8\u6536\u8FDB\u6765"), React.createElement("button", {
+    onClick: () => setTab && setTab("exam"),
+    className: "mt-5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-6 py-3 font-black text-white shadow-lg"
+  }, "\u53BB\u5237\u9898")));
 }
 function App() {
   const [authed, setAuthed] = useState(() => store.get("geo-authed", false));
@@ -1861,14 +1899,17 @@ function App() {
   }), tab === "exam" && React.createElement(Exam, {
     unit: unit,
     progress: progress,
-    setProgress: setProgress
+    setProgress: setProgress,
+    setTab: setTab
   }), tab === "cards" && React.createElement(Cards, {
     unit: unit,
     progress: progress,
     setProgress: setProgress
   }), tab === "wrong" && React.createElement(Wrong, {
     unit: unit,
-    progress: progress
+    progress: progress,
+    setProgress: setProgress,
+    setTab: setTab
   }))));
 }
 (function () {
