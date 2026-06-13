@@ -1202,7 +1202,8 @@ function Sidebar({
   book,
   progress
 }) {
-  const pct = progress[book.id] || 5;
+  const bp = progress[book.id] || { pct: 0, mastered: 0, practiced: 0, units: book.units.length };
+  const pct = bp.pct;
   return React.createElement("aside", {
     className: "side glass lg:sticky lg:top-4 overflow-hidden rounded-[28px] p-4 lg:p-5"
   }, React.createElement("div", {
@@ -1269,7 +1270,7 @@ function Sidebar({
     }
   })), React.createElement("p", {
     className: "mt-3 text-xs font-semibold leading-5 text-slate-500"
-  }, "\u5171 ", book.units.length, " \u4E2A\u5355\u5143 \xB7 \u6D4B\u9A8C\u8FBE 80 \u5206\u8BA1\u5165\u638C\u63E1")));
+  }, "\u5DF2\u7EC3 ", bp.practiced, " / ", bp.units, " \u5355\u5143 \u00B7 \u5DF2\u638C\u63E1 ", bp.mastered, " \u4E2A\uFF08\u6B63\u786E\u7387\u226580%\uFF09")));
 }
 function Header({
   book,
@@ -1511,6 +1512,30 @@ function Exam({
     const next = Object.assign({}, answers);
     next[id] = val;
     setAnswers(next);
+    // 实时保存刷题进度（答题即记录，掌握度随之更新）
+    const liveScore = questions.reduce((sum, q) => {
+      const v = next[q.id];
+      if (q.type === "fill") return sum + (fillCorrect(v, q.answer) ? 5 : 0);
+      return sum + (Number(v) === q.answer ? 5 : 0);
+    }, 0);
+    const wrong = questions.filter(q => {
+      const v = next[q.id];
+      if (v === undefined || v === null || v === "") return false;
+      return q.type === "fill" ? !fillCorrect(v, q.answer) : Number(v) !== q.answer;
+    }).map(q => q.id);
+    const prev = progress.exam[unit.id] || {};
+    const nextExam = Object.assign({}, progress.exam);
+    nextExam[unit.id] = {
+      answers: next,
+      done: prev.done || false,
+      best: Math.max(prev.best || 0, liveScore),
+      wrong: wrong
+    };
+    const np = Object.assign({}, progress, {
+      exam: nextExam
+    });
+    setProgress(np);
+    store.set("geo-progress-v2", np);
   }
   function submit() {
     const wrong = questions.filter(q => q.type === "fill" ? !fillCorrect(answers[q.id], q.answer) : Number(answers[q.id]) !== q.answer).map(q => q.id);
@@ -1782,8 +1807,24 @@ function App() {
   const bookProgress = useMemo(() => {
     const out = {};
     BOOKS.forEach(b => {
-      const done = b.units.filter(u => ((progress.exam[u.id] || {}).best || 0) >= 80).length;
-      out[b.id] = Math.max(5, Math.round(done / b.units.length * 100));
+      let earned = 0, total = 0, mastered = 0, practiced = 0;
+      b.units.forEach(u => {
+        const qs = makeExam(u);
+        const max = qs.length * 5 || 1;
+        const ex = progress.exam[u.id] || {};
+        const best = Math.min(ex.best || 0, max);
+        const answered = ex.answers ? Object.keys(ex.answers).length : 0;
+        earned += best;
+        total += max;
+        if (best / max >= 0.8) mastered += 1;
+        if (answered > 0 || ex.done) practiced += 1;
+      });
+      out[b.id] = {
+        pct: total ? Math.round(earned / total * 100) : 0,
+        mastered: mastered,
+        practiced: practiced,
+        units: b.units.length
+      };
     });
     return out;
   }, [progress]);
