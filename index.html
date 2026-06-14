@@ -1765,69 +1765,95 @@ function Wrong({
   setTab
 }) {
   const all = useMemo(() => makeExam(unit), [unit.id]);
-  const [round, setRound] = useState(0);
-  const [items, setItems] = useState([]);
-  const [ans, setAns] = useState({});
-  // \u5FEB\u7167\uFF1A\u4EC5\u5728\u5207\u6362\u5355\u5143\u6216\u70B9"\u91CD\u65B0\u7EC3\u4E60"\u65F6\u91CD\u5EFA\uFF0C\u7B54\u5BF9\u79FB\u51FA\u540E\u9898\u76EE\u4ECD\u7559\u5728\u672C\u8F6E\u5217\u8868\u91CC\u663E\u793A\u53CD\u9988
+  const [mode, setMode] = useState("review");
+  const [practiceItems, setPracticeItems] = useState([]);
+  const [practiceAns, setPracticeAns] = useState({});
+  const [practiceRound, setPracticeRound] = useState(0);
   useEffect(() => {
-    const cur = (progress.exam[unit.id] || {}).wrong || [];
-    const built = all.filter(q => cur.includes(q.id)).map(q => {
+    setMode("review");
+  }, [unit.id]);
+  const wrongIds = (progress.exam[unit.id] || {}).wrong || [];
+  const reviewItems = all.filter(q => wrongIds.includes(q.id));
+  function startPractice() {
+    const seed = Date.now() >>> 0;
+    const items = reviewItems.map((q, i) => {
       if (q.type === "fill") return Object.assign({}, q);
-      const sh = shuffleWithAnswer(q.options, q.answer, hashStr(q.id + "-wr" + round));
+      const sh = shuffleWithAnswer(q.options, q.answer, (seed + i * 65537) >>> 0);
       return Object.assign({}, q, {
         options: sh.options,
         answer: sh.answer
       });
     });
-    setItems(built);
-    setAns({});
-  }, [unit.id, round]);
-  const remaining = ((progress.exam[unit.id] || {}).wrong || []).length;
-  function onAnswer(q, val) {
-    setAns(prev => Object.assign({}, prev, {
+    setPracticeItems(items);
+    setPracticeAns({});
+    setPracticeRound(r => r + 1);
+    setMode("practice");
+  }
+  function practiceAnswer(q, val) {
+    setPracticeAns(prev => Object.assign({}, prev, {
       [q.id]: val
     }));
-    const ok = q.type === "fill" ? fillCorrect(val, q.answer) : Number(val) === q.answer;
-    if (ok) {
-      const prev = progress.exam[unit.id] || {};
-      const nw = (prev.wrong || []).filter(id => id !== q.id);
-      const nextExam = Object.assign({}, progress.exam, {
-        [unit.id]: Object.assign({}, prev, {
-          wrong: nw
-        })
-      });
-      const np = Object.assign({}, progress, {
-        exam: nextExam
-      });
-      setProgress(np);
-      store.set("geo-progress-v2", np);
-    }
+  }
+  const allDone = practiceItems.length > 0 && practiceItems.every(q => {
+    const v = practiceAns[q.id];
+    return q.type === "fill" ? String(v || "").trim().length > 0 : v !== undefined && v !== null && v !== "";
+  });
+  if (mode === "practice") {
+    return React.createElement("section", {
+      className: "glass rounded-[28px] p-5"
+    }, React.createElement("div", {
+      className: "mb-5 flex flex-wrap items-center justify-between gap-3"
+    }, React.createElement("div", {
+      className: "flex flex-wrap items-center gap-3"
+    }, React.createElement("h3", {
+      className: "text-2xl font-black"
+    }, "\u9519\u9898\u7EC3\u4E60"), React.createElement("span", {
+      className: "rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-600"
+    }, "\u9519\u9898\u7EC3\u4E60 \u00B7 \u4E0D\u8BA1\u8FDB\u5EA6")), React.createElement("button", {
+      onClick: () => setMode("review"),
+      className: "shrink-0 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-600"
+    }, "\u8FD4\u56DE\u9519\u9898\u5E93")), React.createElement("div", {
+      className: "space-y-4"
+    }, practiceItems.map((q, i) => React.createElement(Question, {
+      key: q.id + "-r" + practiceRound,
+      q: q,
+      index: i,
+      value: practiceAns[q.id],
+      done: false,
+      onChange: v => practiceAnswer(q, v)
+    }))), allDone ? React.createElement("div", {
+      className: "mt-6 flex flex-wrap justify-center gap-3"
+    }, React.createElement("button", {
+      onClick: startPractice,
+      className: "rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-6 py-3 font-black text-white shadow-lg"
+    }, "\u518D\u7EC3\u4E00\u904D\uFF08\u91CD\u65B0\u6D17\u724C\uFF09"), React.createElement("button", {
+      onClick: () => setMode("review"),
+      className: "rounded-2xl border border-slate-200 bg-white px-6 py-3 font-black text-slate-700"
+    }, "\u8FD4\u56DE\u9519\u9898\u5E93")) : null);
   }
   return React.createElement("section", {
     className: "glass rounded-[28px] p-5"
   }, React.createElement("div", {
-    className: "flex flex-wrap items-start justify-between gap-3"
-  }, React.createElement("div", null, React.createElement("h3", {
+    className: "mb-2"
+  }, React.createElement("h3", {
     className: "text-2xl font-black"
   }, "\u9519\u9898\u672C"), React.createElement("p", {
     className: "mt-1 text-sm font-semibold text-slate-500"
-  }, "\u505A\u9519\u7684\u9898\u81EA\u52A8\u6536\u96C6\u5230\u8FD9\u91CC\uFF0C\u7B54\u5BF9\u5373\u79FB\u51FA \u00B7 \u9009\u9879\u5DF2\u91CD\u65B0\u6392\u5E8F")), items.length ? React.createElement("button", {
-    onClick: () => setRound(round + 1),
-    className: "shrink-0 rounded-2xl bg-slate-100 px-4 py-2.5 text-sm font-black text-slate-700"
-  }, "\u91CD\u65B0\u7EC3\u4E60") : null), items.length ? React.createElement("div", {
+  }, "\u505A\u9519\u7684\u9898\u81EA\u52A8\u6536\u96C6\u5230\u8FD9\u91CC\uFF0C\u67E5\u770B\u89E3\u6790\u540E\u53EF\u91CD\u65B0\u7EC3\u4E60")), reviewItems.length ? [React.createElement("div", {
+    key: "list",
     className: "mt-5 space-y-4"
-  }, React.createElement("p", {
-    className: "text-xs font-black text-orange-600"
-  }, "\u5269\u4F59 " + remaining + " / " + items.length + " \u9053\u672A\u638C\u63E1"), items.map((q, i) => React.createElement("div", {
+  }, reviewItems.map((q, i) => React.createElement(Question, {
     key: q.id,
-    className: ans[q.id] !== undefined && (q.type === "fill" ? fillCorrect(ans[q.id], q.answer) : Number(ans[q.id]) === q.answer) ? "opacity-60" : ""
-  }, React.createElement(Question, {
     q: q,
     index: i,
-    value: ans[q.id],
-    done: false,
-    onChange: v => onAnswer(q, v)
-  })))) : React.createElement("div", {
+    value: undefined,
+    done: true,
+    onChange: () => {}
+  }))), React.createElement("button", {
+    key: "btn",
+    onClick: startPractice,
+    className: "mt-6 w-full rounded-2xl bg-gradient-to-r from-red-500 to-rose-500 px-6 py-4 text-lg font-black text-white shadow-lg"
+  }, "\u91CD\u65B0\u7EC3\u4E60\u6240\u6709\u9519\u9898\uFF08" + reviewItems.length + " \u9898\uFF09")] : React.createElement("div", {
     className: "mt-6 rounded-[30px] bg-slate-50 p-10 text-center"
   }, React.createElement("p", {
     className: "text-2xl font-black text-emerald-600"
