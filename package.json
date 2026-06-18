@@ -1,5 +1,9 @@
 {
-  "dependencies": {
+  "scripts": {
+    "sync-public": "node scripts/sync-public.js",
+    "deploy": "npm run sync-public && wrangler deploy"
+  },
+  "devDependencies": {
     "jsdom": "^29.1.1"
   }
 }

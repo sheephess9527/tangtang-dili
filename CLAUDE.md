@@ -6,8 +6,8 @@
 `main`**。每次推送到 `main`，Cloudflare 会自动运行 `npx wrangler deploy` 重新部署。
 
 - 部署配置文件 `wrangler.jsonc` 必须保留在 `main` 根目录，**不要删除**。
-  其中 `"assets": { "directory": "." }` 表示把仓库根目录作为静态资源目录，
-  直接对外提供 `index.html`。
+  静态资源目录为 `public/`，只上传 `index.html`，避免把 `node_modules` 等开发文件
+  一并部署导致 Cloudflare 构建失败。
 - `cloudflare/workers-autoconfig` 分支只是 Cloudflare 机器人自动创建的配置 PR 分支，
   **不是**部署分支，不需要往它推送代码。
 - 自定义域名：`www.tangguo.date`。
@@ -15,7 +15,8 @@
 ### 改完代码的标准流程
 
 ```bash
-git add index.html
+npm run sync-public          # 把根目录 index.html 同步到 public/
+git add index.html public/index.html
 git commit -m "..."
 git push -u origin main      # 推到 main 即触发 Cloudflare 自动部署
 ```
