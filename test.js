@@ -24,7 +24,11 @@ setTimeout(() => {
   ok(errors.length === 0, "Part A: no runtime errors/console.error -> " + JSON.stringify(errors.slice(0,3)));
 
   // ---------- Part B: pure-logic tests on the compiled functions ----------
-  let appJs = fs.readFileSync("/tmp/app.compiled.js", "utf8");
+  // 直接从 index.html 抽取内联的应用脚本（不依赖任何外部临时文件，clone 后即可 `node test.js`）。
+  // 页面里有多个无属性 <script>：React/ReactDOM 的 UMD bundle 与应用代码；应用脚本以 makeExam 为标志。
+  const blocks = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  let appJs = blocks.find(b => /function makeExam\(/.test(b));
+  if (!appJs) { console.log("  FAIL: 未能在 index.html 中定位应用脚本"); console.log(`\n${pass} passed, ${++fail} failed`); process.exit(1); }
   // neutralize the final render IIFE so nothing touches ReactDOM
   appJs = appJs.replace(/\(function\s*\(\)\s*\{\s*const rootEl[\s\S]*?\}\)\(\);\s*$/, "");
   const dom2 = new JSDOM(html, { runScripts: "outside-only" });
