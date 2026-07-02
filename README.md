@@ -42,15 +42,19 @@ node test.js           # 跑测试，应输出 “20 passed, 0 failed”
 
 ```
 index.html              # ★ 唯一的应用源文件（内联 React UMD + 应用代码 + 数据）
-public/index.html       # 部署产物，由 sync-public 从根目录复制（勿手改）
+sw.js                   # Service Worker（离线支持）；部署源文件，sync-public 复制到 public/
+og-cover.png            # 社交分享图（og:image）；部署源文件，sync-public 复制到 public/
+public/                 # 部署产物目录（由 sync-public 生成）：index.html + sw.js + og-cover.png，勿手改
 test.js                 # 测试：Part A 整页渲染冒烟 + Part B 纯逻辑（自包含，无需临时文件）
 wrangler.jsonc          # Cloudflare 部署配置（assets 目录 = ./public，勿删）
 package.json            # scripts: sync-public / deploy；devDep: jsdom
 scripts/
-  sync-public.js        # 根 index.html → public/index.html
+  sync-public.js        # 把 index.html / sw.js / og-cover.png 复制到 public/
   generate-practice.js  # 由教材考点/易错点离线生成 genBank（AI 练习题），写回 index.html
 docs/
   build-icon.js         # 纯像素+4x 超采样生成 App 图标（apple-touch-icon / manifest / favicon）
+  og-card.html          # 社交分享图的 HTML 模板（1200×630）
+  build-og.js           # 用无头 Chromium 把 og-card.html 渲染成 og-cover.png
 CLAUDE.md               # 给 AI 代理的操作规则（部署、分支、测试、注意事项）
 ```
 

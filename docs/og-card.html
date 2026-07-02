@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; }
+  html { background: #32209C; }
+  body {
+    position: absolute; inset: 0;
+    font-family: "WenQuanYi Zen Hei", "Noto Sans CJK SC", sans-serif;
+    color: #fff;
+    background:
+      radial-gradient(760px 460px at 20% 8%, rgba(200,197,255,.28), transparent 60%),
+      radial-gradient(700px 500px at 96% 108%, rgba(30,20,102,.55), transparent 60%),
+      linear-gradient(135deg, #6F6AF2 0%, #4B39C0 52%, #32209C 100%);
+    display: flex; align-items: center; gap: 70px;
+    padding: 0 88px;
+  }
+  .logo { flex: 0 0 auto; filter: drop-shadow(0 24px 48px rgba(15,10,60,.45)); }
+  .right { flex: 1 1 auto; }
+  .title { font-size: 104px; font-weight: 700; letter-spacing: 2px; line-height: 1.02; }
+  .tagline { margin-top: 20px; font-size: 37px; font-weight: 500; color: rgba(255,255,255,.9); letter-spacing: 1px; }
+  .chips { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 16px; }
+  .chip {
+    font-size: 27px; font-weight: 500; padding: 11px 26px; border-radius: 999px;
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); color: #fff;
+  }
+  .url {
+    position: absolute; right: 88px; bottom: 46px;
+    font-size: 27px; font-weight: 500; color: rgba(255,255,255,.78); letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+  <svg class="logo" width="330" height="330" viewBox="0 0 100 100">
+    <defs>
+      <radialGradient id="sph" cx="38%" cy="32%" r="72%">
+        <stop offset="0" stop-color="#ffffff"/>
+        <stop offset="0.62" stop-color="#EDECFA"/>
+        <stop offset="1" stop-color="#C7C3EE"/>
+      </radialGradient>
+      <linearGradient id="pin" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFA06A"/>
+        <stop offset="1" stop-color="#EF4E3A"/>
+      </linearGradient>
+    </defs>
+    <!-- 地球本体 -->
+    <circle cx="50" cy="52" r="31" fill="url(#sph)"/>
+    <g fill="none" stroke="#8C88D8" stroke-width="1.1" opacity="0.65">
+      <circle cx="50" cy="52" r="31"/>
+      <ellipse cx="50" cy="52" rx="13" ry="31"/>
+      <ellipse cx="50" cy="52" rx="25" ry="31"/>
+      <path d="M19 52h62"/>
+      <path d="M23.5 37h53M23.5 67h53"/>
+    </g>
+    <!-- 定位钉 -->
+    <path d="M50 33c-6.4 0-11 4.7-11 10.8 0 7.9 11 17.2 11 17.2s11-9.3 11-17.2C61 37.7 56.4 33 50 33Z" fill="url(#pin)"/>
+    <circle cx="50" cy="43.4" r="4.2" fill="#FFF3EC"/>
+  </svg>
+  <div class="right">
+    <div class="title">糖糖地理通</div>
+    <div class="tagline">浙江高中地理 · 自学提分神器</div>
+    <div class="chips">
+      <span class="chip">考点精讲</span>
+      <span class="chip">易混辨析</span>
+      <span class="chip">浙江真题</span>
+      <span class="chip">错题闭环</span>
+    </div>
+  </div>
+  <div class="url">www.tangguo.date</div>
+</body>
+</html>
