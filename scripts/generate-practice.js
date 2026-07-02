@@ -1,3 +1,6 @@
+// ⚠️ 注意：本脚本会整体重算 genBank 并覆盖 index.html。
+//    scripts/refine-distractors.js 里对部分辨析题的干扰项做过人工精修，
+//    重跑本脚本会覆盖那些改动——如需保留，请在此之后再跑一次 refine-distractors.js。
 const fs = require("fs");
 const path = require("path").join(__dirname, "..", "index.html");
 let html = fs.readFileSync(path, "utf8");
