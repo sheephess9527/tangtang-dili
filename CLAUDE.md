@@ -16,7 +16,10 @@ AI 代理的**操作规约与红线**，动手前请通读。
   unitRealMap, genBank }`。它是一行超长 JSON，**改它请走脚本**（`scripts/*.js` 都是
   “读出 JSON→改→写回 index.html” 的范式），不要手撕。
 - 关键函数：`makeExam(unit)` 组卷、`shuffleWithAnswer` 确定性洗牌、`fillCorrect` 填空判分。
-  持久化用 localStorage：`geo-authed`（口令门禁）、`geo-progress-v2`（练习/错题/识字卡进度）。
+  持久化用 localStorage：`geo-authed`（口令门禁）、`geo-progress-v2`（练习/错题/识字卡进度）、
+  `geo-theme`（外观 auto/light/dark，`<head>` 早期脚本据此给 `<html>` 加 `dark` class）。
+- PWA：`sw.js` 提供离线支持（导航网络优先、断网回退缓存），在渲染 IIFE 里注册；
+  深色配色 = `html.dark` 下整套重定义设计系统变量；安全区用 `env(safe-area-inset-*)`。
 - 登录口令 `0315` / `0825`，是**客户端软门禁、非安全机制**（源码可见），仅用于本地登录测试。
 - `b2u5 环境与发展` 缺 `guide2` 字段，遍历单元生成内容时**必须兜底**，否则漏内容或报错。
 
@@ -59,9 +62,13 @@ git push -u origin main      # 推到 main 即触发 Cloudflare 自动部署（n
 - `realBank`：浙江历年真题题库（选择题 choice / 填空题 fill）
 - `unitRealMap`：单元 ID → 真题 ID 数组的映射
 - `makeExam(unit)`：按单元生成试卷（全部映射真题 + 生成的专项题，无每单元数量上限）
-- `public/index.html`：由 `npm run sync-public` 从根目录 `index.html` 同步而来，
-  是 Cloudflare 真正部署的文件（勿手改，改根目录后同步）
-- `scripts/sync-public.js`：把根目录 `index.html` 复制到 `public/index.html`
+- `sw.js` / `og-cover.png`：Service Worker（离线）与社交分享图，都是**部署源文件**，
+  由 sync-public 复制到 `public/`
+- `public/`：部署产物目录（`index.html` + `sw.js` + `og-cover.png`），由 `npm run sync-public`
+  从根目录同步而来，是 Cloudflare 真正部署的内容（勿手改，改根目录后同步）
+- `scripts/sync-public.js`：把 `index.html` / `sw.js` / `og-cover.png` 复制到 `public/`
+- `scripts/generate-practice.js`：重算 genBank；`scripts/refine-distractors.js`：69 道辨析题
+  干扰项的人工精修（**重跑生成器后必须再跑一次精修**，否则精修被覆盖）
 - `wrangler.jsonc`：Cloudflare 部署配置（资源目录 `./public`，勿删）
 
 ## 测试
@@ -80,6 +87,11 @@ node test.js   # 20 项测试，覆盖渲染冒烟测试 + makeExam / 题库逻�
   未经用户明确许可，**不要推送到约定之外的分支**；`cloudflare/workers-autoconfig` 也不要碰。
 - **每次改动收尾**固定动作：`npm run sync-public` →（涉及逻辑/数据时）`node test.js` →
   `git add index.html public/index.html`（及相关脚本）→ commit → 按需 push。
+- **每次改动都必须同步更新 `README.md` 和本文件**（用户明确要求的固定规约）：新增/改动了
+  功能、脚本、数据结构、localStorage key、部署流程、已知坑，就把两份文档对应部分改到
+  与代码一致，和代码放进同一个 commit。文档过期比没有文档更害人。
+- 改题库注意顺序：`generate-practice.js`（重算）→ `refine-distractors.js`（恢复人工精修）→
+  sync → 测试。顺序反了精修就丢了。
 - **改了根 `index.html` 必须同步 `public/`**，这是“改了没生效”的头号原因。
 - **不要提交 `docs/` 下生成的图片/产物**（`icon-*.png`、预览图等可由脚本重建）；脚本本身要留。
 - 改 `geo-data`/题库后，务必跑测试（含“每道真题都要在某单元出现、答案索引合法、答案不全是 A”

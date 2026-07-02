@@ -1,7 +1,9 @@
 # 糖糖地理通（tangtang-dili）
 
 面向**浙江高中地理**的自学练习站：按教材单元提供考点精讲、易混辨析、浙江历年真题训练、
-识字卡和「错题本 + 错题练习」闭环。线上地址：**https://www.tangguo.date**
+识字卡和「错题本 + 错题练习」闭环。支持 **PWA**（加到主屏像原生 App、Service Worker 离线可用、
+全面屏安全区适配）、**深色模式**（跟随系统/手动）、**进度导出导入**（换设备不丢）。
+线上地址：**https://www.tangguo.date**
 
 > 这份 README 的目标：**任何人（或任何 AI）clone 下来就能立刻接手**。
 > 给 AI 代理的硬性约束写在 [`CLAUDE.md`](./CLAUDE.md)，请先读它。
@@ -51,6 +53,7 @@ package.json            # scripts: sync-public / deploy；devDep: jsdom
 scripts/
   sync-public.js        # 把 index.html / sw.js / og-cover.png 复制到 public/
   generate-practice.js  # 由教材考点/易错点离线生成 genBank（AI 练习题），写回 index.html
+  refine-distractors.js # 人工精修 69 道辨析题的干扰项（重跑生成器后需再跑一次它）
 docs/
   build-icon.js         # 纯像素+4x 超采样生成 App 图标（apple-touch-icon / manifest / favicon）
   og-card.html          # 社交分享图的 HTML 模板（1200×630）
@@ -99,12 +102,22 @@ CLAUDE.md               # 给 AI 代理的操作规则（部署、分支、测�
 ### 4.4 组件与导航
 顶层 `App` 用 `tab` 切换四个页签：
 `learn 教材考点` · `exam 真题实战` · `cards 识字卡` · `wrong 错题本`。
-组件：`Login, Sidebar, Header, Learn, Exam, Question, Cards, Wrong, Brand, Icon, Diagram`。
+组件：`Login, Sidebar, SettingsPanel, Header, Learn, Exam, Question, Cards, Wrong, Brand, Icon, Diagram`。
+`SettingsPanel` 挂在侧栏底部：外观切换（跟随系统/浅色/深色）+ 进度导出/导入按钮。
 
 ### 4.5 状态与持久化（localStorage）
 - `geo-authed`：是否已通过口令门禁。
+- `geo-theme`：外观模式 `auto / light / dark`。`<head>` 里有段**早期脚本**在首帧前按它 +
+  系统偏好给 `<html>` 加/去 `dark` class（避免深色闪屏），并暴露 `window.__applyTheme(mode)` 供切换。
 - `geo-progress-v2`：`{ exam: { 单元id: { answers, done, best, wrong:[题id…] } }, cards: { 单元id:[已记住卡id…] } }`。
   - 做错的题自动进 `wrong`；答对移出。**错题练习模式**只用组件本地 state，不写回 `wrong`、不计进度。
+  - 侧栏「导出/导入进度」就是对这个 key 的 JSON 备份与恢复。
+
+### 4.6 PWA / 离线 / 深色（都在哪儿）
+- `sw.js`：Service Worker，导航请求**网络优先、断网回退缓存首页**；在应用脚本末尾的渲染 IIFE 里注册。
+- 深色配色：设计系统 CSS 变量在 `html.dark` 下整套重定义（见 `<style>` 末段），另覆盖少数硬编码类。
+- 安全区：`viewport-fit=cover` + `body` 的 `env(safe-area-inset-*)` 内边距。
+- 分享图：`og:image` 指向 `https://www.tangguo.date/og-cover.png`（1200×630）。
 
 ---
 
@@ -113,13 +126,17 @@ CLAUDE.md               # 给 AI 代理的操作规则（部署、分支、测�
 - **改题/加题（真题）**：编辑 `geo-data` 里的 `realBank` 与 `unitRealMap` → `sync-public` →
   `node test.js`（有“每道真题都要在某单元出现/答案索引合法/答案不全是 A”等断言）。
 - **重生成 AI 练习题**：`node scripts/generate-practice.js`（它会读教材考点/易错点重算 `genBank`
-  并写回 `index.html`）→ `sync-public` → 测试。
+  并写回 `index.html`）→ ⚠️ **再跑 `node scripts/refine-distractors.js`**（否则 69 道辨析题的
+  人工精修干扰项会被生成器覆盖）→ `sync-public` → 测试。
+- **改分享图**：编辑 `docs/og-card.html` → `node docs/build-og.js`（无头 Chromium 渲染出根目录
+  `og-cover.png`）→ `sync-public`。
 - **改教材讲解内容**：编辑对应 Unit 的 `guide2`（重点/难点/考向/易混辨析/口诀）。
 - **改 UI/交互**：直接改最后一段 `<script>` 里的 `React.createElement` 代码（无 JSX/无打包）。
   样式优先用页面 `:root` 里的“设计系统”CSS 变量（`--accent: #5B5BD6` 等）和已有 class。
 - **换图标**：改 `docs/build-icon.js` 的设计参数 → `node docs/build-icon.js`（生成 180/192/512 PNG +
   data URL）→ 把 data URL 替换进 `index.html` 的 `apple-touch-icon` / `manifest` / favicon → sync → 测试。
-- **任何改动收尾**：`npm run sync-public && node test.js`，确认通过再 commit。
+- **任何改动收尾**：`npm run sync-public && node test.js`，确认通过再 commit；
+  同时把本 README 和 `CLAUDE.md` 里受影响的部分更新到与代码一致（固定规约）。
 
 ---
 
@@ -167,3 +184,9 @@ node test.js   # 20 项；Part A 用 jsdom 真实挂载整页做渲染冒烟，P
 3. `geo-data` 是一行很长的 JSON，改它建议用脚本（`scripts/*.js` 都是“读出 JSON→改→写回”的范式）。
 4. `b2u5` 缺 `guide2`，遍历单元生成内容时要兜底，否则会漏内容或报错。
 5. 登录口令是明文软门禁，别当作安全措施；任何敏感能力都不应只靠它。
+6. **重跑 `generate-practice.js` 会覆盖辨析题的人工精修干扰项**——之后必须再跑一次
+   `refine-distractors.js`（两个脚本顶部都有注释说明）。
+7. 部署后用户端可能还看到旧页面：Service Worker 是“网络优先”，联网打开一次即拿到新版；
+   排查时先硬刷新（Cmd/Ctrl+Shift+R），别急着怀疑部署失败。
+8. **每次改动（功能/脚本/数据/流程）都要同步更新本 README 和 `CLAUDE.md`**，
+   文档与代码不一致会直接误导下一个接手的人（或 AI）。
