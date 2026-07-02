@@ -2,9 +2,13 @@ const fs = require("fs");
 const path = require("path");
 
 const root = path.join(__dirname, "..");
-const src = path.join(root, "index.html");
-const dest = path.join(root, "public", "index.html");
+const publicDir = path.join(root, "public");
+fs.mkdirSync(publicDir, { recursive: true });
 
-fs.mkdirSync(path.dirname(dest), { recursive: true });
-fs.copyFileSync(src, dest);
-console.log("Synced index.html -> public/index.html");
+// 需要对外部署的文件：应用本体 + Service Worker（离线支持）。
+// sw.js 必须作为独立文件放到 public/ 根，否则 SPA 回退会把 /sw.js 也返回成 index.html。
+const files = ["index.html", "sw.js"];
+files.forEach(function (name) {
+  fs.copyFileSync(path.join(root, name), path.join(publicDir, name));
+  console.log("Synced " + name + " -> public/" + name);
+});

@@ -2,10 +2,33 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>糖糖地理通</title>
   <meta name="description" content="糖糖地理通——面向浙江高中地理的单元学习、重点难点易错点精讲、真题训练、识字卡与错题强化练习平台。" />
-  <meta name="theme-color" content="#5B5BD6" />
+  <meta name="theme-color" content="#5B5BD6" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#14141C" media="(prefers-color-scheme: dark)" />
+  <script>
+    /* 早期执行：按存储的 geo-theme（auto/light/dark）+ 系统偏好设置 html.dark，避免深色模式闪屏 */
+    (function () {
+      try {
+        var mql = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : { matches: false, addEventListener: function () {} };
+        function eff(mode) { return mode === "dark" || (mode !== "light" && mql.matches); }
+        window.__applyTheme = function (mode) {
+          if (mode) { try { localStorage.setItem("geo-theme", mode); } catch (e) {} }
+          var cur = mode;
+          if (!cur) { try { cur = localStorage.getItem("geo-theme"); } catch (e) {} }
+          cur = cur || "auto";
+          document.documentElement.classList.toggle("dark", eff(cur));
+          return cur;
+        };
+        window.__applyTheme();
+        if (mql.addEventListener) mql.addEventListener("change", function () {
+          var c = "auto"; try { c = localStorage.getItem("geo-theme") || "auto"; } catch (e) {}
+          if (c === "auto") window.__applyTheme();
+        });
+      } catch (e) {}
+    })();
+  </script>
   <meta property="og:type" content="website" />
   <meta property="og:title" content="糖糖地理通" />
   <meta property="og:description" content="面向浙江高中地理的单元学习、重点难点易错点精讲、真题训练。" />
@@ -216,6 +239,46 @@
     @media (min-width: 1024px) { .lg\:p-5 { padding: 1.25rem; } }
 
     @media (max-width: 960px) { .layout { grid-template-columns: 1fr; } .side { position: static; height: auto; } }
+
+    /* ---- 全面屏安全区：PWA 全屏时让内容避开刘海/灵动岛与底部横条 ---- */
+    body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+    /* ============================================================
+       深色模式：html.dark 由 <head> 早期脚本按 geo-theme + 系统偏好切换。
+       站点颜色几乎都走 CSS 变量，这里主要重定义变量 + 少数硬编码类。
+       ============================================================ */
+    html.dark {
+      --accent: #7C77FF; --accent-hover: #8C88FF; --accent-press: #9A96FF;
+      --accent-light: #9C99F5; --accent-soft: #282842; --accent-soft-text: #BEBCFF;
+      --ink: #F1F1F6; --ink-2: #AAAAB8; --ink-3: #7B7B89;
+      --surface: #1B1B23; --surface-2: #232330; --surface-3: #2D2D3C;
+      --border: rgba(255,255,255,.09); --border-strong: rgba(255,255,255,.17);
+      --success: #34D399; --success-soft: #10281F;
+      --danger: #F87171; --danger-soft: #331B1F;
+      --warn: #FBBF24; --warn-soft: #2E2410;
+      --shadow-1: 0 1px 2px rgba(0,0,0,.45);
+      --shadow-2: 0 2px 10px rgba(0,0,0,.5);
+      --shadow-3: 0 12px 36px rgba(0,0,0,.62);
+    }
+    html.dark body {
+      background:
+        radial-gradient(900px 380px at 78% -8%, rgba(124,119,255,.10), transparent 60%),
+        linear-gradient(180deg, #14141C 0%, #0E0E14 100%);
+    }
+    html.dark .bg-white { background-color: var(--surface); }
+    html.dark .text-slate-700 { color: var(--ink-2); }
+    html.dark .bg-slate-900 { background-color: var(--surface-3); }
+    html.dark .bg-slate-900:hover { background-color: #3A3A4C; }
+    html.dark .bg-slate-100:hover { background-color: #34343F; }
+    html.dark .bg-slate-300 { background-color: #3A3A46; }
+    html.dark .shadow-orange-200 { --tw-shadow-color: rgba(124,119,255,.28); }
+
+    /* ---- 设置面板：外观分段控件 + 进度导入导出按钮 ---- */
+    .tt-seg { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 3px; }
+    .tt-seg button { flex: 1; border: 0; background: transparent; color: var(--ink-2); font-size: 12.5px; font-weight: 600; padding: 7px 0; border-radius: 9px; cursor: pointer; transition: background-color .18s var(--ease), color .18s var(--ease); }
+    .tt-seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1); }
+    .tt-databtn { flex: 1; display: block; text-align: center; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font-weight: 600; font-size: 13px; padding: 9px 0; border-radius: 12px; cursor: pointer; transition: border-color .18s var(--ease), color .18s var(--ease); }
+    .tt-databtn:hover { border-color: var(--border-strong); color: var(--ink); }
   </style>
 </head>
 <body>
@@ -1204,13 +1267,88 @@ function makeExam(unit) {
   });
   return questions;
 }
+function SettingsPanel({
+  rawProgress,
+  setProgress
+}) {
+  const [theme, setThemeState] = useState(() => {
+    try { return localStorage.getItem("geo-theme") || "auto"; } catch (e) { return "auto"; }
+  });
+  function setTheme(mode) {
+    setThemeState(mode);
+    if (window.__applyTheme) window.__applyTheme(mode);
+  }
+  function exportData() {
+    const payload = { app: "tangtang-dili", version: 2, exportedAt: new Date().toISOString(), progress: store.get("geo-progress-v2", { exam: {}, cards: {} }) };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const d = new Date(), pad = n => String(n).padStart(2, "0");
+    a.href = url;
+    a.download = "糖糖地理通-进度-" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".json";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  function importData(e) {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(reader.result);
+        const p = obj && obj.progress ? obj.progress : obj;
+        if (!p || typeof p !== "object" || typeof p.exam !== "object" || typeof p.cards !== "object") {
+          alert("文件格式不对，请选择本站导出的进度文件。");
+          return;
+        }
+        store.set("geo-progress-v2", p);
+        setProgress(p);
+        alert("进度已导入。");
+      } catch (err) {
+        alert("读取失败，文件可能已损坏。");
+      }
+    };
+    reader.readAsText(file);
+  }
+  return React.createElement("div", {
+    className: "mt-5"
+  }, React.createElement("hr", {
+    className: "tt-divider"
+  }), React.createElement("p", {
+    className: "tt-label"
+  }, "外观"), React.createElement("div", {
+    className: "tt-seg"
+  }, [["auto", "跟随系统"], ["light", "浅色"], ["dark", "深色"]].map(o => React.createElement("button", {
+    key: o[0],
+    className: theme === o[0] ? "on" : "",
+    onClick: () => setTheme(o[0])
+  }, o[1]))), React.createElement("p", {
+    className: "tt-label",
+    style: { marginTop: "14px" }
+  }, "学习进度（换设备/清缓存前先导出）"), React.createElement("div", {
+    className: "flex gap-2"
+  }, React.createElement("button", {
+    className: "tt-databtn",
+    onClick: exportData
+  }, "导出进度"), React.createElement("label", {
+    className: "tt-databtn"
+  }, "导入进度", React.createElement("input", {
+    type: "file",
+    accept: "application/json,.json",
+    onChange: importData,
+    style: { display: "none" }
+  }))));
+}
 function Sidebar({
   bookId,
   setBookId,
   unitId,
   setUnitId,
   book,
-  progress
+  progress,
+  rawProgress,
+  setProgress
 }) {
   const bp = progress[book.id] || { pct: 0, mastered: 0, practiced: 0, units: book.units.length };
   const pct = bp.pct;
@@ -1280,7 +1418,10 @@ function Sidebar({
     }
   })), React.createElement("p", {
     className: "mt-3 text-xs font-semibold leading-5 text-slate-500"
-  }, "\u5DF2\u7EC3 ", bp.practiced, " / ", bp.units, " \u5355\u5143 \u00B7 \u5DF2\u638C\u63E1 ", bp.mastered, " \u4E2A\uFF08\u6B63\u786E\u7387\u226580%\uFF09")));
+  }, "\u5DF2\u7EC3 ", bp.practiced, " / ", bp.units, " \u5355\u5143 \u00B7 \u5DF2\u638C\u63E1 ", bp.mastered, " \u4E2A\uFF08\u6B63\u786E\u7387\u226580%\uFF09")), React.createElement(SettingsPanel, {
+    rawProgress: rawProgress,
+    setProgress: setProgress
+  }));
 }
 function Header({
   book,
@@ -1915,7 +2056,9 @@ function App() {
       setTab("learn");
     },
     book: book,
-    progress: bookProgress
+    progress: bookProgress,
+    rawProgress: progress,
+    setProgress: setProgress
   }), React.createElement("div", {
     className: "min-w-0 space-y-5"
   }, React.createElement(Header, {
@@ -1951,6 +2094,11 @@ function App() {
     ReactDOM.createRoot(rootEl).render(React.createElement(ErrorBoundary, null, React.createElement(App, null)));
   } catch (e) {
     if (rootEl) rootEl.textContent = "页面加载失败，请刷新重试。";
+  }
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {});
+    });
   }
 })();
   </script>
