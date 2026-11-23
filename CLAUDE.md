@@ -18,7 +18,8 @@ AI 代理的**操作规约与红线**，动手前请通读。
 - 关键函数：`makeExam(unit)` 组卷、`shuffleWithAnswer` 确定性洗牌、`fillCorrect` 填空判分。
   持久化用 localStorage：`geo-authed`（口令门禁）、`geo-progress-v2`（练习/错题/识字卡进度）、
   `geo-theme`（外观 auto/light/dark，`<head>` 早期脚本据此给 `<html>` 加 `dark` class）。
-- PWA：`sw.js` 提供离线支持（导航网络优先、断网回退缓存），在渲染 IIFE 里注册；
+- PWA：`sw.js` 提供离线支持（导航网络优先、断网回退缓存首页），在渲染 IIFE 里注册；
+  缓存版本 `tangtang-dili-v2`，仅成功的 `/` 或 `/index.html` 响应更新首页缓存，404 不入缓存。
   深色配色 = `html.dark` 下整套重定义设计系统变量；安全区用 `env(safe-area-inset-*)`。
 - 登录口令 `0315` / `0825`，是**客户端软门禁、非安全机制**（源码可见），仅用于本地登录测试。
 - `b2u5 环境与发展` 缺 `guide2` 字段，遍历单元生成内容时**必须兜底**，否则漏内容或报错。
@@ -30,8 +31,8 @@ AI 代理的**操作规约与红线**，动手前请通读。
 
 - 部署配置文件 `wrangler.jsonc` 必须保留在 `main` 根目录，**不要删除**。
   其中 `"assets": { "directory": "./public" }` 指定**静态资源目录是 `public/`**，
-  `not_found_handling: single-page-application` 让未知路径回退到 `index.html`。
-  这样只把 `public/index.html` 对外提供，避免 `node_modules` 等开发文件被一并部署
+  `not_found_handling: 404-page` 让未知路径返回 HTTP 404 和 `public/404.html`。
+  应用没有客户端路由，不需要 SPA fallback。只对外提供 `public/` 静态资源，避免 `node_modules` 等开发文件被一并部署
   导致 Cloudflare 构建失败。
 - ⚠️ **真正对外服务的是 `public/index.html`，不是根目录的 `index.html`。**
   根目录的 `index.html` 是源文件（开发、测试都用它），改完后必须用 `npm run sync-public`
@@ -64,9 +65,10 @@ git push -u origin main      # 推到 main 即触发 Cloudflare 自动部署（n
 - `makeExam(unit)`：按单元生成试卷（全部映射真题 + 生成的专项题，无每单元数量上限）
 - `sw.js` / `og-cover.png`：Service Worker（离线）与社交分享图，都是**部署源文件**，
   由 sync-public 复制到 `public/`
-- `public/`：部署产物目录（`index.html` + `sw.js` + `og-cover.png`），由 `npm run sync-public`
-  从根目录同步而来，是 Cloudflare 真正部署的内容（勿手改，改根目录后同步）
-- `scripts/sync-public.js`：把 `index.html` / `sw.js` / `og-cover.png` 复制到 `public/`
+- `404.html`：独立的未知路径页面，无 JS，跟随系统深浅色；由 sync-public 复制到 `public/`
+- `public/`：部署目录，含同步的 `index.html` / `404.html` / `sw.js` / `og-cover.png`，
+  以及 `robots.txt` / `sitemap.xml`；Cloudflare 真正部署的内容（勿手改同步文件，改根目录后同步）
+- `scripts/sync-public.js`：把 `index.html` / `404.html` / `sw.js` / `og-cover.png` 复制到 `public/`
 - `scripts/generate-practice.js`：重算 genBank；`scripts/refine-distractors.js`：69 道辨析题
   干扰项的人工精修（**重跑生成器后必须再跑一次精修**，否则精修被覆盖）
 - `wrangler.jsonc`：Cloudflare 部署配置（资源目录 `./public`，勿删）
