@@ -46,12 +46,13 @@ node test.js           # 跑测试，应输出 “20 passed, 0 failed”
 index.html              # ★ 唯一的应用源文件（内联 React UMD + 应用代码 + 数据）
 sw.js                   # Service Worker（离线支持）；部署源文件，sync-public 复制到 public/
 og-cover.png            # 社交分享图（og:image）；部署源文件，sync-public 复制到 public/
-public/                 # 部署产物目录（由 sync-public 生成）：index.html + sw.js + og-cover.png，勿手改
+404.html                # 未知路径的独立 404 页面（无 JS），跟随系统深浅色
+public/                 # 部署目录：同步的 index.html / 404.html / sw.js / og-cover.png，以及 robots.txt / sitemap.xml，勿手改同步文件
 test.js                 # 测试：Part A 整页渲染冒烟 + Part B 纯逻辑（自包含，无需临时文件）
 wrangler.jsonc          # Cloudflare 部署配置（assets 目录 = ./public，勿删）
 package.json            # scripts: sync-public / deploy；devDep: jsdom
 scripts/
-  sync-public.js        # 把 index.html / sw.js / og-cover.png 复制到 public/
+  sync-public.js        # 把 index.html / 404.html / sw.js / og-cover.png 复制到 public/
   generate-practice.js  # 由教材考点/易错点离线生成 genBank（AI 练习题），写回 index.html
   refine-distractors.js # 人工精修 69 道辨析题的干扰项（重跑生成器后需再跑一次它）
 docs/
@@ -114,7 +115,7 @@ CLAUDE.md               # 给 AI 代理的操作规则（部署、分支、测�
   - 侧栏「导出/导入进度」就是对这个 key 的 JSON 备份与恢复。
 
 ### 4.6 PWA / 离线 / 深色（都在哪儿）
-- `sw.js`：Service Worker，导航请求**网络优先、断网回退缓存首页**；在应用脚本末尾的渲染 IIFE 里注册。
+- `sw.js`：Service Worker（缓存 `tangtang-dili-v2`），导航请求**网络优先、断网回退缓存首页**；仅成功的 `/` 或 `/index.html` 响应更新首页缓存，404 不会污染离线首页。在应用脚本末尾的渲染 IIFE 里注册。
 - 深色配色：设计系统 CSS 变量在 `html.dark` 下整套重定义（见 `<style>` 末段），另覆盖少数硬编码类。
 - 安全区：`viewport-fit=cover` + `body` 的 `env(safe-area-inset-*)` 内边距。
 - 分享图：`og:image` 指向 `https://www.tangguo.date/og-cover.png`（1200×630）。
@@ -144,8 +145,9 @@ CLAUDE.md               # 给 AI 代理的操作规则（部署、分支、测�
 
 - 通过 **Cloudflare Workers Builds（Git 集成）** 部署，**生产分支是 `main`**；推送到 `main`
   即触发 `wrangler deploy`。
-- `wrangler.jsonc` 里 `assets.directory = ./public`，`not_found_handling = single-page-application`，
-  即**只对外提供 `public/index.html`**。
+- `wrangler.jsonc` 里 `assets.directory = ./public`，`not_found_handling = 404-page`，
+  只对外提供 `public/` 静态资源；未知路径返回 HTTP 404 和 `public/404.html`，不回退到首页。
+  应用没有客户端路由，不需要 SPA fallback。
 - 标准流程：
   ```bash
   npm run sync-public                 # 根 index.html → public/index.html（必须！）
