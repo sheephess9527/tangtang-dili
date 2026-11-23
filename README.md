@@ -148,6 +148,8 @@ CLAUDE.md               # 给 AI 代理的操作规则（部署、分支、测�
 - `wrangler.jsonc` 里 `assets.directory = ./public`，`not_found_handling = 404-page`，
   只对外提供 `public/` 静态资源；未知路径返回 HTTP 404 和 `public/404.html`，不回退到首页。
   应用没有客户端路由，不需要 SPA fallback。
+- `observability.enabled` 为 `false`（2026-11-23 按用户确认关闭）：本站是纯静态资源、
+  没有 Worker 脚本逻辑，不需要 Workers Logs 采样；不影响部署、访问与 Cloudflare Web Analytics。
 - 标准流程：
   ```bash
   npm run sync-public                 # 根 index.html → public/index.html（必须！）

@@ -34,6 +34,8 @@ AI 代理的**操作规约与红线**，动手前请通读。
   `not_found_handling: 404-page` 让未知路径返回 HTTP 404 和 `public/404.html`。
   应用没有客户端路由，不需要 SPA fallback。只对外提供 `public/` 静态资源，避免 `node_modules` 等开发文件被一并部署
   导致 Cloudflare 构建失败。
+- `observability.enabled` 为 `false`（2026-11-23 按用户确认关闭）：纯静态站点无 Worker 脚本逻辑，
+  不需要 Workers Logs 采样；不影响部署、页面访问、SW 缓存与 Cloudflare Web Analytics。
 - ⚠️ **真正对外服务的是 `public/index.html`，不是根目录的 `index.html`。**
   根目录的 `index.html` 是源文件（开发、测试都用它），改完后必须用 `npm run sync-public`
   同步到 `public/`，否则线上不会有任何变化。两者一旦不一致，最常见的"改了没生效"
